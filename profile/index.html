@@ -99,7 +99,27 @@
 
   const tg = window.Telegram?.WebApp;
   tg?.ready();
-  const INIT_DATA = tg?.initData || new URLSearchParams(location.search).get('init_data') || '';
+
+  function pickInitData() {
+    // 1) нормальный путь в WebApp
+    if (tg?.initData && tg.initData.length > 0) return tg.initData;
+
+    // 2) ?init_data=... или ?tgWebAppData=...
+    const sp = new URLSearchParams(location.search);
+    const q1 = sp.get('init_data') || sp.get('tgWebAppData');
+    if (q1) return q1;
+
+    // 3) #init_data=... или #tgWebAppData=...
+    const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
+    const q2 = hp.get('init_data') || hp.get('tgWebAppData');
+    if (q2) return q2;
+
+    return '';
+  }
+  const INIT_DATA = pickInitData();
+  // быстрая проверка в консоли
+  console.debug('[profile] tg?', !!tg, 'initData.len', INIT_DATA.length);
+
 
   async function api(path, options = {}) {
     const url = `${API_BASE}${path}${path.includes('?') ? '&' : '?'}init_data=${encodeURIComponent(INIT_DATA)}`;
