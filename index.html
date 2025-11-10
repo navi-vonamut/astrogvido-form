@@ -8,6 +8,7 @@
 
   <!-- Bootstrap + gijgo (как у вас) -->
   <link rel="stylesheet" href="stylesheet/bootstrap.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="javascript/bootstrap.bundle.min.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
@@ -93,154 +94,207 @@
   </div>
 
   <script>
-    // ====== CONFIG ======
-    const DEBOUNCE_MS = 250;
-    const MIN_QUERY = 2;
+  // ====== DEBUG BOX ======
+  const dbg = {
+    el: null,
+    init() {
+      const box = document.createElement('div');
+      box.className = 'container mt-3';
+      box.innerHTML = `
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h2 class="h6 mb-0">Debug</h2>
+              <button id="dbg-clear" class="btn btn-sm btn-outline-secondary">Очистить</button>
+            </div>
+            <pre id="dbg-out" class="mt-2" style="white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;"></pre>
+          </div>
+        </div>`;
+      document.body.appendChild(box);
+      this.el = box.querySelector('#dbg-out');
+      box.querySelector('#dbg-clear').addEventListener('click', () => this.clear());
+    },
+    log(obj, title='LOG') {
+      if (!this.el) return;
+      const time = new Date().toISOString();
+      const text = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+      this.el.textContent += `[${time}] ${title}:\n${text}\n\n`;
+    },
+    clear(){ if (this.el) this.el.textContent=''; }
+  };
+  dbg.init();
 
-    // ====== API base detection ======
-    function getApiBase() {
-      const qs = new URLSearchParams(location.search);
-      const fromQS = qs.get('api'); // можно ?api=https://dev-api.example.com
-      const fromMeta = document.querySelector('meta[name="api-base"]')?.content;
-      const fallback = 'https://api.astrogvido.ru/';
-      const base = (fromQS || fromMeta || fallback).trim();
-      return base.endsWith('/') ? base : base + '/';
-    }
-    const API_BASE = getApiBase();
+  // ====== Telegram SDK ======
+  const tg = window.Telegram?.WebApp;
+  tg?.ready();
 
-    // Нормальная сборка URL (правит слэши и кодирует параметры)
-    function apiUrl(path, params) {
-      const u = new URL(path, API_BASE);
-      if (params) {
-        for (const [k, v] of Object.entries(params)) {
-          if (v !== undefined && v !== null) u.searchParams.set(k, String(v));
-        }
+  function pickInitData() {
+    // 1) WebApp.initData
+    if (tg?.initData && tg.initData.length > 0) return tg.initData;
+    // 2) query ?init_data=...
+    const sp = new URLSearchParams(location.search);
+    const q1 = sp.get('init_data') || sp.get('tgWebAppData');
+    if (q1) return q1;
+    // 3) hash #tgWebAppData=...
+    const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
+    const q2 = hp.get('init_data') || hp.get('tgWebAppData');
+    if (q2) return q2;
+    return '';
+  }
+  const INIT_DATA = pickInitData();
+  dbg.log({ hasWebApp: !!tg, initDataLen: INIT_DATA.length }, 'Telegram context');
+
+  // ====== API base ======
+  function getApiBase() {
+    const qs = new URLSearchParams(location.search);
+    const fromQS = qs.get('api');
+    const fromMeta = document.querySelector('meta[name="api-base"]')?.content;
+    const fallback = 'https://api.astrogvido.ru/';
+    const base = (fromQS || fromMeta || fallback).trim();
+    return base.endsWith('/') ? base : base + '/';
+  }
+  const API_BASE = getApiBase();
+
+  function apiUrl(path, params) {
+    const u = new URL(path, API_BASE);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null) u.searchParams.set(k, String(v));
       }
-      return u.toString();
     }
+    return u.toString();
+  }
 
-    // ====== Session token для Геосаджеста (один на сессию страницы) ======
-    const SESSIONTOKEN = (self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
+  // ====== Suggest (как было) ======
+  const DEBOUNCE_MS = 250;
+  const MIN_QUERY = 2;
+  const SESSIONTOKEN = (self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
+  let SUGGEST_LL = null, SUGGEST_SPN = null;
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      ({coords:{latitude,longitude}}) => {
+        SUGGEST_LL = `${longitude.toFixed(4)},${latitude.toFixed(4)}`;
+        SUGGEST_SPN = '10,8';
+        dbg.log({SUGGEST_LL,SUGGEST_SPN}, 'Geolocation');
+      },
+      () => {},
+      { maximumAge: 60_000, timeout: 2_000, enableHighAccuracy: false }
+    );
+  }
 
-    // ====== Контекст карты (ll/spn) — не обязательно, но повышает релевантность ======
-    let SUGGEST_LL = null; // "lon,lat"
-    let SUGGEST_SPN = null; // "lonSpan,latSpan"
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          // Примерно: окно 10°x8° — можно подстроить
-          SUGGEST_LL = `${longitude.toFixed(4)},${latitude.toFixed(4)}`;
-          SUGGEST_SPN = '10,8';
-        },
-        () => { /* молча игнорируем отказ */ },
-        { maximumAge: 60_000, timeout: 2_000, enableHighAccuracy: false }
-      );
-    }
-
-
-    // ====== Suggest (Яндекс через наш API) ======
-    let selected = null; // выбранный элемент {label, uri, address}
-    function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
-
-    function renderSuggestions(items) {
-      const $drop = $('#city-suggest');
-      $drop.empty();
-      if (!items || !items.length) { $drop.removeClass('show'); return; }
-      items.forEach(it => {
-        const $a = $('<a class="dropdown-item" href="#"></a>').text(it.label);
-        $a.on('click', (e) => {
-          e.preventDefault();
-          selected = it;
-          $('#city').val(it.label);
-          $drop.removeClass('show');
-        });
-        $drop.append($a);
+  let selected = null;
+  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+  function renderSuggestions(items) {
+    const $drop = $('#city-suggest');
+    $drop.empty();
+    if (!items || !items.length) { $drop.removeClass('show'); return; }
+    items.forEach(it => {
+      const $a = $('<a class="dropdown-item" href="#"></a>').text(it.label);
+      $a.on('click', (e) => {
+        e.preventDefault();
+        selected = it;
+        $('#city').val(it.label);
+        $drop.removeClass('show');
+        dbg.log(it, 'Selected city');
       });
-      $drop.addClass('show');
+      $drop.append($a);
+    });
+    $drop.addClass('show');
+  }
+
+  const suggest = debounce(async function () {
+    selected = null;
+    const text = $('#city').val().trim();
+    if (text.length < MIN_QUERY) { $('#city-suggest').removeClass('show'); return; }
+
+    const params = {
+      text,
+      lang: 'ru_RU',
+      results: 8,
+      types: 'geo',
+      print_address: 1,
+      attrs: 'uri',
+      sessiontoken: SESSIONTOKEN
+    };
+    if (SUGGEST_LL) params.ll = SUGGEST_LL;
+    if (SUGGEST_SPN) params.spn = SUGGEST_SPN;
+
+    try {
+      const url = apiUrl('/places/suggest_ya', params);
+      dbg.log(url, 'Suggest URL');
+      const r = await fetch(url, { cache: 'no-store' });
+      const data = await r.json();
+      dbg.log(data, 'Suggest response');
+      renderSuggestions(data.items || []);
+    } catch (e) {
+      dbg.log(String(e), 'Suggest error');
+      $('#city-suggest').removeClass('show');
+    }
+  }, DEBOUNCE_MS);
+
+  $('#city').on('input focus', suggest);
+  $(document).on('click', (e) => {
+    if (!$(e.target).closest('#city').length && !$(e.target).closest('#city-suggest').length) {
+      $('#city-suggest').removeClass('show');
+    }
+  });
+
+  // ====== Submit ======
+  $('form.needs-validation').on('submit', async function (e) {
+    e.preventDefault();
+
+    const name = $('#firstName').val().trim();
+    const date_local = $('#datepicker').val(); // yyyy-mm-dd
+    let time_local = $('#unknownTime').is(':checked') ? '12:00:00' : ($('#timepicker').val() || '');
+
+    if (!date_local) { alert('Укажите дату рождения.'); return; }
+    if (!time_local) time_local = '12:00:00';
+    else if (time_local.length === 5) time_local += ':00';
+
+    const cityVal = $('#city').val().trim();
+    const hasUri = !!(selected && selected.uri);
+
+    const payload = {
+      name,
+      lang: 'ru',
+      date_local,
+      time_local,
+      ...(hasUri ? { yandex_uri: selected.uri } : (cityVal ? { city: cityVal } : {}))
+    };
+
+    dbg.log(payload, 'Payload to send');
+
+    // Если это WebApp в Telegram — отдаём данные в бота
+    if (tg) {
+      try {
+        tg.sendData(JSON.stringify(payload));
+        dbg.log('sendData() called', 'Telegram');
+        tg.close();
+      } catch (err) {
+        dbg.log(String(err), 'Telegram sendData error');
+        alert('Ошибка отправки в Telegram WebApp: ' + err.message);
+      }
+      return;
     }
 
-    const suggest = debounce(async function () {
-      selected = null;
-      const text = $('#city').val().trim();
-      if (text.length < MIN_QUERY) { $('#city-suggest').removeClass('show'); return; }
+    // Фоллбек — прямой вызов API
+    try {
+      const r = await fetch(apiUrl('/natal/by_city'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await r.json();
+      dbg.log(data, 'API /natal/by_city response');
+      if (!r.ok) throw new Error(data.detail || 'Ошибка запроса');
+      alert('Профиль сохранён: ' + (data.place?.display_name || 'ok'));
+    } catch (err) {
+      dbg.log(String(err), 'API error');
+      alert('Не удалось сохранить профиль: ' + err.message);
+    }
+  });
+</script>
 
-      const params = {
-        text,                       // НЕ кодируем вручную — URLSearchParams сделает сам
-        lang: 'ru_RU',              // нормализованный язык для Яндекса
-        results: 8,
-        types: 'geo',               // можно 'locality,geo' если хотите сузить
-        print_address: 1,
-        attrs: 'uri',
-        sessiontoken: SESSIONTOKEN
-      };
-      if (SUGGEST_LL) params.ll = SUGGEST_LL;
-      if (SUGGEST_SPN) params.spn = SUGGEST_SPN;
-
-      try {
-        const url = apiUrl('/places/suggest_ya', params);
-        const r = await fetch(url, { cache: 'no-store' });
-        if (!r.ok) throw new Error('Suggest HTTP ' + r.status);
-        const data = await r.json();
-        renderSuggestions(data.items || []);
-      } catch (e) {
-        console.warn('Suggest error', e);
-        $('#city-suggest').removeClass('show');
-      }
-    }, DEBOUNCE_MS);
-
-    $('#city').on('input focus', suggest);
-    $(document).on('click', (e) => {
-      if (!$(e.target).closest('#city').length && !$(e.target).closest('#city-suggest').length) {
-        $('#city-suggest').removeClass('show');
-      }
-    });
-
-    // ====== Submit ======
-    $('form.needs-validation').on('submit', async function (e) {
-      e.preventDefault();
-
-      const name = $('#firstName').val().trim();
-      const date_local = $('#datepicker').val(); // yyyy-mm-dd (gijgo)
-      let time_local = $('#unknownTime').is(':checked') ? '12:00:00' : ($('#timepicker').val() || '');
-
-      if (!date_local) { alert('Укажите дату рождения.'); return; }
-      if (!time_local) time_local = '12:00:00';
-      else if (time_local.length === 5) time_local += ':00';
-
-      const cityVal = $('#city').val().trim();
-      const hasUri = !!(selected && selected.uri);
-
-      const payload = {
-        name,
-        lang: 'ru',
-        date_local,
-        time_local,
-        ...(hasUri ? { yandex_uri: selected.uri } : (cityVal ? { city: cityVal } : {}))
-      };
-
-      // Если открыто как Telegram WebApp — отдаём данные в бота
-      if (window.Telegram && Telegram.WebApp) {
-        Telegram.WebApp.sendData(JSON.stringify(payload));
-        Telegram.WebApp.close();
-        return;
-      }
-
-      // Фоллбек вне Telegram: вызываем API напрямую
-      try {
-        const r = await fetch(apiUrl('/natal/by_city'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.detail || 'Ошибка запроса');
-        alert('Профиль сохранён: ' + (data.place?.display_name || 'ok'));
-      } catch (err) {
-        alert('Не удалось сохранить профиль: ' + err.message);
-      }
-    });
-  </script>
 
 </body>
 
