@@ -259,7 +259,7 @@
       lang: 'ru',
       date_local,
       time_local,
-      ...(hasUri ? { yandex_uri: selected.uri } : (cityVal ? { city: cityVal } : {}))
+      ...(hasUri ? { yandex_uri: selected.uri, label: selected.label, city: selected.label } : (cityVal ? { city: cityVal } : {}))
     };
 
     dbg.log(payload, 'Payload to send');
