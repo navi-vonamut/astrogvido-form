@@ -88,206 +88,148 @@
     </main>
   </div>
 
-  <script>
-    const API_BASE = getApiBase();
-    const TG_INIT_DATA = window.Telegram?.WebApp?.initData || '';
-    const TG_INIT_DATA_UNSAFE = window.Telegram?.WebApp?.initDataUnsafe || {};
+<script>
+  // ---------- helpers ----------
+  function getApiBase() {
+    const fromMeta = document.querySelector('meta[name="api-base"]')?.content || '';
+    return fromMeta.replace(/\/+$/, '');
+  }
+  const API_BASE = getApiBase();
 
-    function getApiBase() {
-      const qs = new URLSearchParams(location.search);
-      const fromQS = qs.get('api');
-      const fromMeta = document.querySelector('meta[name="api-base"]')?.content;
-      const fallback = 'https://api.astrogvido.ru/';
-      const base = (fromQS || fromMeta || fallback).trim();
-      return base.endsWith('/') ? base : base + '/';
+  const tg = window.Telegram?.WebApp;
+  tg?.ready();
+  const INIT_DATA = tg?.initData || new URLSearchParams(location.search).get('init_data') || '';
+
+  async function api(path, options = {}) {
+    const url = `${API_BASE}${path}${path.includes('?') ? '&' : '?'}init_data=${encodeURIComponent(INIT_DATA)}`;
+    const res = await fetch(url, {
+      credentials: 'include',
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // ---------- UI refs ----------
+  const $profileStatus  = () => document.querySelector('#profile-status');
+  const $profileError   = () => document.querySelector('#profile-error');
+  const $profileDetails = () => document.querySelector('#profile-details');
+
+  const $scheduleStatus = () => document.querySelector('#schedule-status');
+  const $scheduleError  = () => document.querySelector('#schedule-error');
+  const $scheduleForm   = () => document.querySelector('#schedule-form');
+  const $transitTime    = () => document.querySelector('#transit-time');
+
+  function showError(el, msg) {
+    const box = el();
+    if (!box) return;
+    box.textContent = msg;
+    box.classList.remove('d-none');
+  }
+  function hideError(el) {
+    const box = el();
+    if (!box) return;
+    box.classList.add('d-none');
+    box.textContent = '';
+  }
+  function setBadge(el, text) {
+    const b = el();
+    if (b) b.textContent = text;
+  }
+
+  // ---------- Загрузка профиля ----------
+  async function loadProfile() {
+    setBadge($profileStatus, 'Загрузка…');
+    hideError($profileError);
+
+    if (!INIT_DATA) {
+      setBadge($profileStatus, 'Ошибка');
+      showError($profileError, 'Нет initData. Откройте страницу из Telegram.');
+      return;
     }
 
-    function apiUrl(path, params) {
-      const url = new URL(path, API_BASE);
-      if (params) {
-        Object.entries(params).forEach(([k, v]) => {
-          if (v !== undefined && v !== null && v !== '') {
-            url.searchParams.set(k, v);
-          }
-        });
-      }
-      return url.toString();
-    }
+    try {
+      const resp = await api('/tg/profile');
+      const p = resp?.profile;
 
-    function buildHeaders(extra) {
-      const headers = Object.assign({ 'Content-Type': 'application/json' }, extra || {});
-      const qs = new URLSearchParams(location.search);
-      const token = qs.get('token') || qs.get('auth') || '';
-      if (token) {
-        headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-      }
-      if (TG_INIT_DATA) {
-        headers['X-Telegram-Init-Data'] = TG_INIT_DATA;
-      }
-      return headers;
-    }
-
-    function normalizeTime(value) {
-      if (!value) return null;
-      if (/^\d{2}:\d{2}$/.test(value)) {
-        return `${value}:00`;
-      }
-      return value;
-    }
-
-    async function fetchJson(path, options = {}) {
-      const config = Object.assign({
-        method: 'GET',
-        headers: buildHeaders(options.headers),
-        credentials: 'include'
-      }, options);
-
-      if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
-        config.body = JSON.stringify(options.body);
-      }
-
-      const response = await fetch(path, config);
-      const text = await response.text();
-      let data = null;
-      if (text) {
-        try {
-          data = JSON.parse(text);
-        } catch (error) {
-          console.warn('Invalid JSON response', error);
-        }
-      }
-      if (!response.ok) {
-        const detail = data?.detail || data?.message || response.statusText || 'Ошибка запроса';
-        throw new Error(detail);
-      }
-      return data;
-    }
-
-    function renderProfile(profile) {
-      const container = document.getElementById('profile-details');
-      container.innerHTML = '';
-      if (!profile) {
-        container.innerHTML = '<p class="text-muted mb-0">Данные не найдены.</p>';
+      if (!p) {
+        setBadge($profileStatus, 'Нет данных');
+        $profileDetails().innerHTML = `
+          <div class="col-12 text-muted">Профиль не найден. Сначала заполните форму на главной странице.</div>
+        `;
+        // пустим время по умолчанию
+        if ($transitTime()) $transitTime().value = '';
         return;
       }
 
-      const fields = [
-        { label: 'Имя', value: profile.name || '—' },
-        { label: 'Дата рождения', value: profile.date_local || '—' },
-        { label: 'Время рождения', value: profile.time_local || '—' },
-        { label: 'Место', value: profile.place?.display_name || profile.city || '—' },
-        { label: 'Источник', value: profile.yandex_uri ? 'Яндекс Справочник' : 'Свободный ввод' },
-        { label: 'Яндекс URI', value: profile.yandex_uri || '—', mono: true }
+      // Отрисовка сведений
+      const rows = [
+        ['Дата рождения', p.date || '—'],
+        ['Время рождения', p.time || '—'],
+        ['Часовой пояс', p.tz || '—'],
+        ['Широта', p.lat ?? '—'],
+        ['Долгота', p.lon ?? '—'],
+        ['Время рассылки', p.send_time || '—'],
       ];
+      const html = rows.map(([k,v]) => `
+        <dt class="col-5 text-secondary">${esc(k)}</dt>
+        <dd class="col-7 text-mono">${esc(v)}</dd>
+      `).join('');
+      $profileDetails().innerHTML = html;
 
-      fields.forEach(({ label, value, mono }) => {
-        const dt = document.createElement('dt');
-        dt.className = 'col-sm-5 text-muted';
-        dt.textContent = label;
-        const dd = document.createElement('dd');
-        dd.className = 'col-sm-7';
-        dd.textContent = value;
-        if (mono) {
-          dd.classList.add('text-mono');
-        }
-        container.appendChild(dt);
-        container.appendChild(dd);
+      // Подставим время в инпут
+      if ($transitTime()) $transitTime().value = (p.send_time || '').slice(0,5);
+
+      setBadge($profileStatus, 'Готово');
+    } catch (e) {
+      console.error('loadProfile error:', e);
+      setBadge($profileStatus, 'Ошибка');
+      showError($profileError, 'Не удалось загрузить профиль.');
+    }
+  }
+
+  // ---------- Сохранение времени рассылки ----------
+  async function saveSchedule(evt) {
+    evt?.preventDefault();
+    hideError($scheduleError);
+    setBadge($scheduleStatus, 'Сохранение…');
+
+    const t = $transitTime()?.value || '';
+    // ожидаем формат HH:MM
+    if (!/^\d{2}:\d{2}$/.test(t)) {
+      setBadge($scheduleStatus, 'Ошибка');
+      showError($scheduleError, 'Неверный формат времени. Укажите HH:MM.');
+      return;
+    }
+
+    try {
+      await api('/tg/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ send_time: t })
       });
+      setBadge($scheduleStatus, 'Сохранено');
+      // обновим блок сведений
+      await loadProfile();
+    } catch (e) {
+      console.error('saveSchedule error:', e);
+      setBadge($scheduleStatus, 'Ошибка');
+      showError($scheduleError, 'Не удалось сохранить время.');
     }
+  }
 
-    function setStatus(id, text, variant = 'primary') {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = text;
-      el.className = `badge rounded-pill badge-soft text-${variant}`;
-    }
-
-    function showError(id, message) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (!message) {
-        el.classList.add('d-none');
-        el.textContent = '';
-      } else {
-        el.classList.remove('d-none');
-        el.textContent = message;
-      }
-    }
-
-    async function loadProfile() {
-      const qs = new URLSearchParams(location.search);
-      const profileId = qs.get('profile_id') || qs.get('profileId') || TG_INIT_DATA_UNSAFE?.user?.id || '';
-      const params = profileId ? { profile_id: profileId } : undefined;
-      setStatus('profile-status', 'Загрузка…');
-      showError('profile-error', null);
-
-      try {
-        const data = await fetchJson(apiUrl('/natal/profile', params));
-        const profile = data?.profile || data;
-        renderProfile(profile);
-        setStatus('profile-status', 'Готово', 'success');
-      } catch (error) {
-        renderProfile(null);
-        setStatus('profile-status', 'Ошибка', 'danger');
-        showError('profile-error', error.message || 'Не удалось загрузить профиль');
-      }
-    }
-
-    async function loadSchedule() {
-      setStatus('schedule-status', 'Загрузка…');
-      showError('schedule-error', null);
-      try {
-        const data = await fetchJson(apiUrl('/transits/schedule'));
-        const schedule = data?.schedule || data;
-        if (schedule?.time_local) {
-          document.getElementById('transit-time').value = schedule.time_local.slice(0, 5);
-        }
-        if (schedule?.comment) {
-          document.getElementById('transit-comment').value = schedule.comment;
-        }
-        setStatus('schedule-status', 'Готово', 'success');
-      } catch (error) {
-        setStatus('schedule-status', 'Ошибка', 'danger');
-        showError('schedule-error', error.message || 'Не удалось загрузить расписание');
-      }
-    }
-
-    async function saveSchedule(event) {
-      event.preventDefault();
-      const form = event.currentTarget;
-      form.classList.add('was-validated');
-      if (!form.checkValidity()) {
-        return;
-      }
-
-      const submitButton = document.getElementById('schedule-save');
-      submitButton.disabled = true;
-      submitButton.textContent = 'Сохранение…';
-      showError('schedule-error', null);
-
-      const time = normalizeTime(document.getElementById('transit-time').value);
-      const comment = document.getElementById('transit-comment').value.trim();
-
-      try {
-        await fetchJson(apiUrl('/transits/schedule'), {
-          method: 'PUT',
-          body: { time_local: time, comment: comment || null }
-        });
-        setStatus('schedule-status', 'Сохранено', 'success');
-      } catch (error) {
-        setStatus('schedule-status', 'Ошибка', 'danger');
-        showError('schedule-error', error.message || 'Не удалось сохранить расписание');
-      } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Сохранить';
-      }
-    }
-
-    document.getElementById('schedule-form').addEventListener('submit', saveSchedule);
-
+  document.addEventListener('DOMContentLoaded', () => {
+    // сабмит формы времени
+    $scheduleForm()?.addEventListener('submit', saveSchedule);
+    // первая загрузка профиля
     loadProfile();
-    loadSchedule();
-  </script>
+  });
+</script>
+
 </body>
 
 </html>
