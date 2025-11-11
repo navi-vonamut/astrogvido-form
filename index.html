@@ -144,7 +144,6 @@
       ({coords:{latitude,longitude}}) => {
         SUGGEST_LL = `${longitude.toFixed(4)},${latitude.toFixed(4)}`;
         SUGGEST_SPN = '10,8';
-        dbg.log({SUGGEST_LL,SUGGEST_SPN}, 'Geolocation');
       },
       () => {},
       { maximumAge: 60_000, timeout: 2_000, enableHighAccuracy: false }
@@ -164,7 +163,6 @@
         selected = it;
         $('#city').val(it.label);
         $drop.removeClass('show');
-        dbg.log(it, 'Selected city');
       });
       $drop.append($a);
     });
@@ -190,13 +188,10 @@
 
     try {
       const url = apiUrl('/places/suggest_ya', params);
-      dbg.log(url, 'Suggest URL');
       const r = await fetch(url, { cache: 'no-store' });
       const data = await r.json();
-      dbg.log(data, 'Suggest response');
       renderSuggestions(data.items || []);
     } catch (e) {
-      dbg.log(String(e), 'Suggest error');
       $('#city-suggest').removeClass('show');
     }
   }, DEBOUNCE_MS);
@@ -231,16 +226,13 @@
       ...(hasUri ? { yandex_uri: selected.uri, label: selected.label, city: selected.label } : (cityVal ? { city: cityVal } : {}))
     };
 
-    dbg.log(payload, 'Payload to send');
 
     // Если это WebApp в Telegram — отдаём данные в бота
     if (tg) {
       try {
         tg.sendData(JSON.stringify(payload));
-        dbg.log('sendData() called', 'Telegram');
         tg.close();
       } catch (err) {
-        dbg.log(String(err), 'Telegram sendData error');
         alert('Ошибка отправки в Telegram WebApp: ' + err.message);
       }
       return;
@@ -254,11 +246,9 @@
         body: JSON.stringify(payload)
       });
       const data = await r.json();
-      dbg.log(data, 'API /natal/by_city response');
       if (!r.ok) throw new Error(data.detail || 'Ошибка запроса');
       alert('Профиль сохранён: ' + (data.place?.display_name || 'ok'));
     } catch (err) {
-      dbg.log(String(err), 'API error');
       alert('Не удалось сохранить профиль: ' + err.message);
     }
   });
