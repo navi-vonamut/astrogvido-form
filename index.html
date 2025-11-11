@@ -94,36 +94,6 @@
   </div>
 
   <script>
-  // ====== DEBUG BOX ======
-  const dbg = {
-    el: null,
-    init() {
-      const box = document.createElement('div');
-      box.className = 'container mt-3';
-      box.innerHTML = `
-        <div class="card border-0 shadow-sm">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <h2 class="h6 mb-0">Debug</h2>
-              <button id="dbg-clear" class="btn btn-sm btn-outline-secondary">Очистить</button>
-            </div>
-            <pre id="dbg-out" class="mt-2" style="white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;"></pre>
-          </div>
-        </div>`;
-      document.body.appendChild(box);
-      this.el = box.querySelector('#dbg-out');
-      box.querySelector('#dbg-clear').addEventListener('click', () => this.clear());
-    },
-    log(obj, title='LOG') {
-      if (!this.el) return;
-      const time = new Date().toISOString();
-      const text = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
-      this.el.textContent += `[${time}] ${title}:\n${text}\n\n`;
-    },
-    clear(){ if (this.el) this.el.textContent=''; }
-  };
-  dbg.init();
-
   // ====== Telegram SDK ======
   const tg = window.Telegram?.WebApp;
   tg?.ready();
