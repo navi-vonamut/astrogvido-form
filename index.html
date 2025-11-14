@@ -215,15 +215,29 @@
     if (!time_local) time_local = '12:00:00';
     else if (time_local.length === 5) time_local += ':00';
 
+    // В index.html, в обработчике submit:
     const cityVal = $('#city').val().trim();
     const hasUri = !!(selected && selected.uri);
+
+    if (!cityVal) {
+      alert('Укажите город.');
+      return;
+    }
+
+    // Проверка: был ли выбран город из подсказок
+    if (!selected) {
+      alert('Пожалуйста, выберите город из списка подсказок, а не просто вводите текст.');
+      return;
+    }
 
     const payload = {
       name,
       lang: 'ru',
       date_local,
       time_local,
-      ...(hasUri ? { yandex_uri: selected.uri, label: selected.label, city: selected.label } : (cityVal ? { city: cityVal } : {}))
+      yandex_uri: selected.uri,
+      label: selected.label,
+      city: selected.label
     };
 
 
