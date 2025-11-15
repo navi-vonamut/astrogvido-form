@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Astro Gvido — Профиль</title>
 
-  <link rel="stylesheet" href="stylesheet/bootstrap.min.css">
+  <link rel="stylesheet" href="../stylesheet/bootstrap.min.css" />
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="javascript/bootstrap.bundle.min.js"></script>
+  <script src="../javascript/bootstrap.bundle.min.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <meta name="api-base" content="https://api.astrogvido.ru">
@@ -31,7 +31,64 @@
 </head>
 
 <body class="bg-body-tertiary">
-  <script>
+  <div class="container">
+    <main class="py-4">
+      <div class="p-3 text-center">
+        <img class="d-block mx-auto mb-4" src="../image/cute-chibi-style-fantasy-creature-inspired-by-taur (1).png" alt=""
+          width="72" height="72" />
+        <h1 class="h2">Профиль и транзиты</h1>
+        <p class="lead">Здесь можно посмотреть сохранённые данные и выбрать удобное время для интерпретации транзитов.</p>
+      </div>
+
+      <div class="row justify-content-center g-4">
+        <div class="col-12 col-lg-6">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Сохранённые данные</h2>
+                <span class="badge rounded-pill badge-soft" id="profile-status">Загрузка…</span>
+              </div>
+              <div id="profile-error" class="alert alert-danger d-none" role="alert"></div>
+              <dl class="row mb-0" id="profile-details">
+                <div class="col-12 placeholder-wave placeholder-block">
+                  <span class="placeholder col-7"></span>
+                  <span class="placeholder col-4"></span>
+                  <span class="placeholder col-6"></span>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Время интерпретации транзитов</h2>
+                <span class="badge rounded-pill badge-soft" id="schedule-status">Загрузка…</span>
+              </div>
+              <div id="schedule-error" class="alert alert-danger d-none" role="alert"></div>
+              <form id="schedule-form" class="needs-validation" novalidate>
+                <div class="mb-3">
+                  <label for="transit-time" class="form-label">Выберите локальное время</label>
+                  <input type="time" class="form-control" id="transit-time" required />
+                  <div class="form-text">Мы пришлём новый разбор транзитов в указанное время.</div>
+                  <div class="invalid-feedback">Укажите время.</div>
+                </div>
+                <div class="mb-3">
+                  <label for="transit-comment" class="form-label">Комментарий (необязательно)</label>
+                  <textarea class="form-control" id="transit-comment" rows="2" placeholder="Например: «Лучше вечером»"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" id="schedule-save">Сохранить</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
   // ---------- helpers ----------
   function getApiBase() {
     const fromMeta = document.querySelector('meta[name="api-base"]')?.content || '';
@@ -192,64 +249,6 @@
     loadProfile();
   });
 </script>
-  <div class="container">
-    <main class="py-4">
-      <div class="p-3 text-center">
-        <img class="d-block mx-auto mb-4" src="../image/cute-chibi-style-fantasy-creature-inspired-by-taur (1).png" alt=""
-          width="72" height="72" />
-        <h1 class="h2">Профиль и транзиты</h1>
-        <p class="lead">Здесь можно посмотреть сохранённые данные и выбрать удобное время для интерпретации транзитов.</p>
-      </div>
-
-      <div class="row justify-content-center g-4">
-        <div class="col-12 col-lg-6">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 class="h5 mb-0">Сохранённые данные</h2>
-                <span class="badge rounded-pill badge-soft" id="profile-status">Загрузка…</span>
-              </div>
-              <div id="profile-error" class="alert alert-danger d-none" role="alert"></div>
-              <dl class="row mb-0" id="profile-details">
-                <div class="col-12 placeholder-wave placeholder-block">
-                  <span class="placeholder col-7"></span>
-                  <span class="placeholder col-4"></span>
-                  <span class="placeholder col-6"></span>
-                </div>
-              </dl>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-12 col-lg-6">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 class="h5 mb-0">Время интерпретации транзитов</h2>
-                <span class="badge rounded-pill badge-soft" id="schedule-status">Загрузка…</span>
-              </div>
-              <div id="schedule-error" class="alert alert-danger d-none" role="alert"></div>
-              <form id="schedule-form" class="needs-validation" novalidate>
-                <div class="mb-3">
-                  <label for="transit-time" class="form-label">Выберите локальное время</label>
-                  <input type="time" class="form-control" id="transit-time" required />
-                  <div class="form-text">Мы пришлём новый разбор транзитов в указанное время.</div>
-                  <div class="invalid-feedback">Укажите время.</div>
-                </div>
-                <div class="mb-3">
-                  <label for="transit-comment" class="form-label">Комментарий (необязательно)</label>
-                  <textarea class="form-control" id="transit-comment" rows="2" placeholder="Например: «Лучше вечером»"></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary w-100" id="schedule-save">Сохранить</button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-
 
 </body>
 
