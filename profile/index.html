@@ -116,23 +116,16 @@ function pickInitData() {
   return '';
 }
 
-// вместо константы – функция
 function getInitData() {
-  // 1. пробуем tg.initData
-  if (tg?.initData && tg.initData.length > 0) return tg.initData;
-
-  // 2. пробуем tgWebAppData в query
-  const sp = new URLSearchParams(location.search);
-  const q1 = sp.get('tgWebAppData') || sp.get('init_data');
-  if (q1) return q1;
-
-  // 3. пробуем hash
-  const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
-  const q2 = hp.get('tgWebAppData') || hp.get('init_data');
-  if (q2) return q2;
-
-  return '';
+  const data = pickInitData();
+  console.debug('[profile] tg?', !!tg,
+                'tg.initData.len', tg?.initData?.length || 0,
+                'INIT_DATA.len', data.length,
+                'search=', location.search,
+                'hash=', location.hash);
+  return data;
 }
+
 
 
   // быстрая проверка в консоли
@@ -141,9 +134,6 @@ function getInitData() {
 
 async function api(path, options = {}) {
   const initData = getInitData();
-  if (!initData) {
-    throw new Error('initData is empty');
-  }
   const url = `${API_BASE}${path}${path.includes('?') ? '&' : '?'}init_data=${encodeURIComponent(initData)}`;
   const res = await fetch(url, {
     credentials: 'include',
