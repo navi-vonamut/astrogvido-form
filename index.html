@@ -150,12 +150,11 @@
     );
   }
 
-  let selected = null;
-  function debounce(fn, ms) {
+function debounce(fn, ms) {
   let t;
-  return (arg) => {
+  return (...args) => {
     clearTimeout(t);
-    t = setTimeout(() => fn(arg), ms);
+    t = setTimeout(() => fn(...args), ms);
   };
 }
   function renderSuggestions(items) {
