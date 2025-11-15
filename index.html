@@ -151,7 +151,13 @@
   }
 
   let selected = null;
-  function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+  function debounce(fn, ms) {
+  let t;
+  return (arg) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(arg), ms);
+  };
+}
   function renderSuggestions(items) {
     const $drop = $('#city-suggest');
     $drop.empty();
