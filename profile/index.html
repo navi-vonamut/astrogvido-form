@@ -118,12 +118,22 @@ function pickInitData() {
 
 // вместо константы – функция
 function getInitData() {
-  const data = pickInitData();
-  console.debug('[profile] tg?', !!tg, 'tg.initData.len', tg?.initData?.length || 0,
-                'INIT_DATA.len', data.length,
-                'search=', location.search, 'hash=', location.hash);
-  return data;
+  // 1. пробуем tg.initData
+  if (tg?.initData && tg.initData.length > 0) return tg.initData;
+
+  // 2. пробуем tgWebAppData в query
+  const sp = new URLSearchParams(location.search);
+  const q1 = sp.get('tgWebAppData') || sp.get('init_data');
+  if (q1) return q1;
+
+  // 3. пробуем hash
+  const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
+  const q2 = hp.get('tgWebAppData') || hp.get('init_data');
+  if (q2) return q2;
+
+  return '';
 }
+
 
   // быстрая проверка в консоли
   console.debug('[profile] tg?', !!tg, 'initData.len', INIT_DATA.length);
@@ -131,6 +141,9 @@ function getInitData() {
 
 async function api(path, options = {}) {
   const initData = getInitData();
+  if (!initData) {
+    throw new Error('initData is empty');
+  }
   const url = `${API_BASE}${path}${path.includes('?') ? '&' : '?'}init_data=${encodeURIComponent(initData)}`;
   const res = await fetch(url, {
     credentials: 'include',
@@ -183,6 +196,7 @@ async function api(path, options = {}) {
       showError($profileError, 'Нет initData. Откройте страницу из Telegram.');
       return;
     }
+
 
     try {
       const resp = await api('/tg/profile');
