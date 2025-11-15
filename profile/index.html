@@ -96,40 +96,50 @@
   }
   const API_BASE = getApiBase();
 
-  const tg = window.Telegram?.WebApp;
-  tg?.ready();
+const tg = window.Telegram?.WebApp;
+tg?.ready();
 
-  function pickInitData() {
-    // 1) нормальный путь в WebApp
-    if (tg?.initData && tg.initData.length > 0) return tg.initData;
+function pickInitData() {
+  // 1) нормальный путь в WebApp
+  if (tg?.initData && tg.initData.length > 0) return tg.initData;
 
-    // 2) ?init_data=... или ?tgWebAppData=...
-    const sp = new URLSearchParams(location.search);
-    const q1 = sp.get('init_data') || sp.get('tgWebAppData');
-    if (q1) return q1;
+  // 2) ?init_data=... или ?tgWebAppData=...
+  const sp = new URLSearchParams(location.search);
+  const q1 = sp.get('init_data') || sp.get('tgWebAppData');
+  if (q1) return q1;
 
-    // 3) #init_data=... или #tgWebAppData=...
-    const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
-    const q2 = hp.get('init_data') || hp.get('tgWebAppData');
-    if (q2) return q2;
+  // 3) #init_data=... или #tgWebAppData=...
+  const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
+  const q2 = hp.get('init_data') || hp.get('tgWebAppData');
+  if (q2) return q2;
 
-    return '';
-  }
-  const INIT_DATA = pickInitData();
+  return '';
+}
+
+// вместо константы – функция
+function getInitData() {
+  const data = pickInitData();
+  console.debug('[profile] tg?', !!tg, 'tg.initData.len', tg?.initData?.length || 0,
+                'INIT_DATA.len', data.length,
+                'search=', location.search, 'hash=', location.hash);
+  return data;
+}
+
   // быстрая проверка в консоли
   console.debug('[profile] tg?', !!tg, 'initData.len', INIT_DATA.length);
 
 
-  async function api(path, options = {}) {
-    const url = `${API_BASE}${path}${path.includes('?') ? '&' : '?'}init_data=${encodeURIComponent(INIT_DATA)}`;
-    const res = await fetch(url, {
-      credentials: 'include',
-      ...options,
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  }
+async function api(path, options = {}) {
+  const initData = getInitData();
+  const url = `${API_BASE}${path}${path.includes('?') ? '&' : '?'}init_data=${encodeURIComponent(initData)}`;
+  const res = await fetch(url, {
+    credentials: 'include',
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
 
   function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -167,7 +177,8 @@
     setBadge($profileStatus, 'Загрузка…');
     hideError($profileError);
 
-    if (!INIT_DATA) {
+    const initData = getInitData();
+    if (!initData) {
       setBadge($profileStatus, 'Ошибка');
       showError($profileError, 'Нет initData. Откройте страницу из Telegram.');
       return;
