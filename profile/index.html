@@ -241,14 +241,29 @@
         method: 'PUT',
         body: JSON.stringify({ send_time: t })
       });
+
       setBadge($scheduleStatus, 'Сохранено');
+
+      // Обновим профиль (если хочешь видеть новые данные перед закрытием)
       await loadProfile();
+
+      // Небольшая задержка чисто для красоты (можно убрать)
+      setTimeout(() => {
+        if (tg && typeof tg.close === 'function') {
+          tg.close();              // ← вот это закрывает веб-форму в Telegram
+        } else {
+          // На случай, если открыли страницу в обычном браузере
+          alert('Время сохранено. Можно закрыть эту страницу.');
+        }
+      }, 400);
+
     } catch (e) {
       console.error('saveSchedule error:', e);
       setBadge($scheduleStatus, 'Ошибка');
       showError($scheduleError, 'Не удалось сохранить время.');
     }
   }
+
 
   document.addEventListener('DOMContentLoaded', () => {
     console.log('[profile] DOMContentLoaded');
