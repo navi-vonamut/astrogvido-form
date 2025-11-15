@@ -96,53 +96,49 @@
   }
   const API_BASE = getApiBase();
 
-const tg = window.Telegram?.WebApp;
-tg?.ready();
+  const tg = window.Telegram?.WebApp;
+  tg?.ready();
 
-function pickInitData() {
-  // 1) нормальный путь в WebApp
-  if (tg?.initData && tg.initData.length > 0) return tg.initData;
+  function pickInitData() {
+    // 1) нормальный путь в WebApp
+    if (tg?.initData && tg.initData.length > 0) return tg.initData;
 
-  // 2) ?init_data=... или ?tgWebAppData=...
-  const sp = new URLSearchParams(location.search);
-  const q1 = sp.get('init_data') || sp.get('tgWebAppData');
-  if (q1) return q1;
+    // 2) ?init_data=... или ?tgWebAppData=...
+    const sp = new URLSearchParams(location.search);
+    const q1 = sp.get('init_data') || sp.get('tgWebAppData');
+    if (q1) return q1;
 
-  // 3) #init_data=... или #tgWebAppData=...
-  const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
-  const q2 = hp.get('init_data') || hp.get('tgWebAppData');
-  if (q2) return q2;
+    // 3) #init_data=... или #tgWebAppData=...
+    const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
+    const q2 = hp.get('init_data') || hp.get('tgWebAppData');
+    if (q2) return q2;
 
-  return '';
-}
+    return '';
+  }
 
-function getInitData() {
-  const data = pickInitData();
-  console.debug('[profile] tg?', !!tg,
-                'tg.initData.len', tg?.initData?.length || 0,
-                'INIT_DATA.len', data.length,
-                'search=', location.search,
-                'hash=', location.hash);
-  return data;
-}
+  function getInitData() {
+    const data = pickInitData();
+    console.debug(
+      '[profile] tg?', !!tg,
+      'tg.initData.len', tg?.initData?.length || 0,
+      'INIT_DATA.len', data.length,
+      'search=', location.search,
+      'hash=', location.hash
+    );
+    return data;
+  }
 
-
-
-  // быстрая проверка в консоли
-  console.debug('[profile] tg?', !!tg, 'initData.len', INIT_DATA.length);
-
-
-async function api(path, options = {}) {
-  const initData = getInitData();
-  const url = `${API_BASE}${path}${path.includes('?') ? '&' : '?'}init_data=${encodeURIComponent(initData)}`;
-  const res = await fetch(url, {
-    credentials: 'include',
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
+  async function api(path, options = {}) {
+    const initData = getInitData();
+    const url = `${API_BASE}${path}${path.includes('?') ? '&' : '?'}init_data=${encodeURIComponent(initData)}`;
+    const res = await fetch(url, {
+      credentials: 'include',
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
 
   function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -177,16 +173,18 @@ async function api(path, options = {}) {
 
   // ---------- Загрузка профиля ----------
   async function loadProfile() {
+    console.log('[profile] loadProfile()');
     setBadge($profileStatus, 'Загрузка…');
     hideError($profileError);
 
     const initData = getInitData();
+    console.log('[profile] initData.len =', (initData || '').length);
+
     if (!initData) {
       setBadge($profileStatus, 'Ошибка');
       showError($profileError, 'Нет initData. Откройте страницу из Telegram.');
       return;
     }
-
 
     try {
       const resp = await api('/tg/profile');
@@ -197,12 +195,10 @@ async function api(path, options = {}) {
         $profileDetails().innerHTML = `
           <div class="col-12 text-muted">Профиль не найден. Сначала заполните форму на главной странице.</div>
         `;
-        // пустим время по умолчанию
         if ($transitTime()) $transitTime().value = '';
         return;
       }
 
-      // Отрисовка сведений
       const rows = [
         ['Дата рождения', p.date || '—'],
         ['Время рождения', p.time || '—'],
@@ -217,7 +213,6 @@ async function api(path, options = {}) {
       `).join('');
       $profileDetails().innerHTML = html;
 
-      // Подставим время в инпут
       if ($transitTime()) $transitTime().value = (p.send_time || '').slice(0,5);
 
       setBadge($profileStatus, 'Готово');
@@ -235,7 +230,6 @@ async function api(path, options = {}) {
     setBadge($scheduleStatus, 'Сохранение…');
 
     const t = $transitTime()?.value || '';
-    // ожидаем формат HH:MM
     if (!/^\d{2}:\d{2}$/.test(t)) {
       setBadge($scheduleStatus, 'Ошибка');
       showError($scheduleError, 'Неверный формат времени. Укажите HH:MM.');
@@ -248,7 +242,6 @@ async function api(path, options = {}) {
         body: JSON.stringify({ send_time: t })
       });
       setBadge($scheduleStatus, 'Сохранено');
-      // обновим блок сведений
       await loadProfile();
     } catch (e) {
       console.error('saveSchedule error:', e);
@@ -258,9 +251,8 @@ async function api(path, options = {}) {
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    // сабмит формы времени
+    console.log('[profile] DOMContentLoaded');
     $scheduleForm()?.addEventListener('submit', saveSchedule);
-    // первая загрузка профиля
     loadProfile();
   });
 </script>
