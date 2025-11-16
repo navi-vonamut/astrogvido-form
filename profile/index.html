@@ -237,31 +237,18 @@
     }
 
     try {
-      // 1) сохраняем время через API
       await api('/tg/profile', {
         method: 'PUT',
         body: JSON.stringify({ send_time: t })
       });
 
       setBadge($scheduleStatus, 'Сохранено');
-
-      // 2) уведомляем бота через WebAppData
-      if (tg && typeof tg.sendData === 'function') {
-        // важно: структура payload должна совпадать с тем,
-        // что ждёт handle_webapp_data в боте
-        tg.sendData(JSON.stringify({ send_time: t }));
-      }
-
-      // 3) (опционально) обновим профиль в UI
       await loadProfile();
 
-      // 4) закрываем WebApp (чуть позже, чтобы все вызовы успели улететь)
+      // даём бэкенду отправить сообщение и закрываем WebApp
       setTimeout(() => {
         if (tg && typeof tg.close === 'function') {
           tg.close();
-        } else {
-          // если не в Telegram, а просто в браузере
-          alert('Время сохранено. Можно закрыть эту страницу.');
         }
       }, 300);
 
@@ -271,6 +258,7 @@
       showError($scheduleError, 'Не удалось сохранить время.');
     }
   }
+
 
 
 
