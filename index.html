@@ -68,15 +68,36 @@
 
                       <div class="col-6">
                         <label class="form-label">Дата рождения</label>
-                        <input  type="date" class="form-control" id="datepicker"  required/>
+                        <input type="date" class="form-control" id="datepicker" required />
                       </div>
 
                       <div class="col-6">
                         <label class="form-label">Время рождения</label>
-                        <input  type="time" class="form-control" id="timepicker" required/>
+                        <input type="time" class="form-control" id="timepicker" required />
                         <div class="form-check mt-2">
                           <input class="form-check-input" type="checkbox" id="unknownTime">
                           <label class="form-check-label" for="unknownTime">Не знаю время (поставим 12:00)</label>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-12">
+                      <hr class="my-4" />
+                      <h4 class="mb-3">Ежедневный гороскоп по транзитам</h4>
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label" for="transitTime">Время отправки</label>
+                          <input type="time" class="form-control" id="transitTime" />
+                          <div class="hint mt-1">
+                            В это время вы будете получать ежедневную интерпретацию транзитов.
+                          </div>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center">
+                          <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="subscribeDaily">
+                            <label class="form-check-label" for="subscribeDaily">
+                              Подписаться на ежедневный гороскоп
+                            </label>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -94,184 +115,203 @@
   </div>
 
   <script>
-  // ====== Telegram SDK ======
-  const tg = window.Telegram?.WebApp;
-  tg?.ready();
+    // ====== Telegram SDK ======
+    const tg = window.Telegram?.WebApp;
+    tg?.ready();
 
-  function pickInitData() {
-    // 1) WebApp.initData
-    if (tg?.initData && tg.initData.length > 0) return tg.initData;
-    // 2) query ?init_data=...
-    const sp = new URLSearchParams(location.search);
-    const q1 = sp.get('init_data') || sp.get('tgWebAppData');
-    if (q1) return q1;
-    // 3) hash #tgWebAppData=...
-    const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
-    const q2 = hp.get('init_data') || hp.get('tgWebAppData');
-    if (q2) return q2;
-    return '';
-  }
-  const INIT_DATA = pickInitData();
+    function pickInitData() {
+      // 1) WebApp.initData
+      if (tg?.initData && tg.initData.length > 0) return tg.initData;
+      // 2) query ?init_data=...
+      const sp = new URLSearchParams(location.search);
+      const q1 = sp.get('init_data') || sp.get('tgWebAppData');
+      if (q1) return q1;
+      // 3) hash #tgWebAppData=...
+      const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
+      const q2 = hp.get('init_data') || hp.get('tgWebAppData');
+      if (q2) return q2;
+      return '';
+    }
+    const INIT_DATA = pickInitData();
 
-  // ====== API base ======
-  function getApiBase() {
-    const qs = new URLSearchParams(location.search);
-    const fromQS = qs.get('api');
-    const fromMeta = document.querySelector('meta[name="api-base"]')?.content;
-    const fallback = 'https://api.astrogvido.ru/';
-    const base = (fromQS || fromMeta || fallback).trim();
-    return base.endsWith('/') ? base : base + '/';
-  }
-  const API_BASE = getApiBase();
+    // ====== API base ======
+    function getApiBase() {
+      const qs = new URLSearchParams(location.search);
+      const fromQS = qs.get('api');
+      const fromMeta = document.querySelector('meta[name="api-base"]')?.content;
+      const fallback = 'https://api.astrogvido.ru/';
+      const base = (fromQS || fromMeta || fallback).trim();
+      return base.endsWith('/') ? base : base + '/';
+    }
+    const API_BASE = getApiBase();
 
-  function apiUrl(path, params) {
-    const u = new URL(path, API_BASE);
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        if (v !== undefined && v !== null) u.searchParams.set(k, String(v));
+    function apiUrl(path, params) {
+      const u = new URL(path, API_BASE);
+      if (params) {
+        for (const [k, v] of Object.entries(params)) {
+          if (v !== undefined && v !== null) u.searchParams.set(k, String(v));
+        }
       }
+      return u.toString();
     }
-    return u.toString();
-  }
 
-  // ====== Suggest (как было) ======
-  const DEBOUNCE_MS = 250;
-  const MIN_QUERY = 2;
-  const SESSIONTOKEN = (self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
-  let SUGGEST_LL = null, SUGGEST_SPN = null;
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      ({coords:{latitude,longitude}}) => {
-        SUGGEST_LL = `${longitude.toFixed(4)},${latitude.toFixed(4)}`;
-        SUGGEST_SPN = '10,8';
-      },
-      () => {},
-      { maximumAge: 60_000, timeout: 2_000, enableHighAccuracy: false }
-    );
-  }
+    // ====== Suggest (как было) ======
+    const DEBOUNCE_MS = 250;
+    const MIN_QUERY = 2;
+    const SESSIONTOKEN = (self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
+    let SUGGEST_LL = null, SUGGEST_SPN = null;
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords: { latitude, longitude } }) => {
+          SUGGEST_LL = `${longitude.toFixed(4)},${latitude.toFixed(4)}`;
+          SUGGEST_SPN = '10,8';
+        },
+        () => { },
+        { maximumAge: 60_000, timeout: 2_000, enableHighAccuracy: false }
+      );
+    }
 
-function debounce(fn, ms) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-}
-  function renderSuggestions(items) {
-    const $drop = $('#city-suggest');
-    $drop.empty();
-    if (!items || !items.length) { $drop.removeClass('show'); return; }
-    items.forEach(it => {
-      const $a = $('<a class="dropdown-item" href="#"></a>').text(it.label);
-      $a.on('click', (e) => {
-        e.preventDefault();
-        selected = it;
-        $('#city').val(it.label);
-        $drop.removeClass('show');
+    function debounce(fn, ms) {
+      let t;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), ms);
+      };
+    }
+    function renderSuggestions(items) {
+      const $drop = $('#city-suggest');
+      $drop.empty();
+      if (!items || !items.length) { $drop.removeClass('show'); return; }
+      items.forEach(it => {
+        const $a = $('<a class="dropdown-item" href="#"></a>').text(it.label);
+        $a.on('click', (e) => {
+          e.preventDefault();
+          selected = it;
+          $('#city').val(it.label);
+          $drop.removeClass('show');
+        });
+        $drop.append($a);
       });
-      $drop.append($a);
-    });
-    $drop.addClass('show');
-  }
-
-  const suggest = debounce(async function () {
-    selected = null;
-    const text = $('#city').val().trim();
-    if (text.length < MIN_QUERY) { $('#city-suggest').removeClass('show'); return; }
-
-    const params = {
-      text,
-      lang: 'ru_RU',
-      results: 8,
-      types: 'geo',
-      print_address: 1,
-      attrs: 'uri',
-      sessiontoken: SESSIONTOKEN
-    };
-    if (SUGGEST_LL) params.ll = SUGGEST_LL;
-    if (SUGGEST_SPN) params.spn = SUGGEST_SPN;
-
-    try {
-      const url = apiUrl('/places/suggest_ya', params);
-      const r = await fetch(url, { cache: 'no-store' });
-      const data = await r.json();
-      renderSuggestions(data.items || []);
-    } catch (e) {
-      $('#city-suggest').removeClass('show');
-    }
-  }, DEBOUNCE_MS);
-
-  $('#city').on('input focus', suggest);
-  $(document).on('click', (e) => {
-    if (!$(e.target).closest('#city').length && !$(e.target).closest('#city-suggest').length) {
-      $('#city-suggest').removeClass('show');
-    }
-  });
-
-  // ====== Submit ======
-  $('form.needs-validation').on('submit', async function (e) {
-    e.preventDefault();
-
-    const name = $('#firstName').val().trim();
-    const date_local = $('#datepicker').val(); // yyyy-mm-dd
-    let time_local = $('#unknownTime').is(':checked') ? '12:00:00' : ($('#timepicker').val() || '');
-
-    if (!date_local) { alert('Укажите дату рождения.'); return; }
-    if (!time_local) time_local = '12:00:00';
-    else if (time_local.length === 5) time_local += ':00';
-
-    // В index.html, в обработчике submit:
-    const cityVal = $('#city').val().trim();
-    const hasUri = !!(selected && selected.uri);
-
-    if (!cityVal) {
-      alert('Укажите город.');
-      return;
+      $drop.addClass('show');
     }
 
-    // Проверка: был ли выбран город из подсказок
-    if (!selected) {
-      alert('Пожалуйста, выберите город из списка подсказок, а не просто вводите текст.');
-      return;
-    }
+    const suggest = debounce(async function () {
+      selected = null;
+      const text = $('#city').val().trim();
+      if (text.length < MIN_QUERY) { $('#city-suggest').removeClass('show'); return; }
 
-    const payload = {
-      name,
-      lang: 'ru',
-      date_local,
-      time_local,
-      yandex_uri: selected.uri,
-      label: selected.label,
-      city: selected.label
-    };
+      const params = {
+        text,
+        lang: 'ru_RU',
+        results: 8,
+        types: 'geo',
+        print_address: 1,
+        attrs: 'uri',
+        sessiontoken: SESSIONTOKEN
+      };
+      if (SUGGEST_LL) params.ll = SUGGEST_LL;
+      if (SUGGEST_SPN) params.spn = SUGGEST_SPN;
 
-
-    // Если это WebApp в Telegram — отдаём данные в бота
-    if (tg) {
       try {
-        tg.sendData(JSON.stringify(payload));
-        tg.close();
-      } catch (err) {
-        alert('Ошибка отправки в Telegram WebApp: ' + err.message);
+        const url = apiUrl('/places/suggest_ya', params);
+        const r = await fetch(url, { cache: 'no-store' });
+        const data = await r.json();
+        renderSuggestions(data.items || []);
+      } catch (e) {
+        $('#city-suggest').removeClass('show');
       }
-      return;
-    }
+    }, DEBOUNCE_MS);
 
-    // Фоллбек — прямой вызов API
-    try {
-      const r = await fetch(apiUrl('/natal/by_city'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.detail || 'Ошибка запроса');
-      alert('Профиль сохранён: ' + (data.place?.display_name || 'ok'));
-    } catch (err) {
-      alert('Не удалось сохранить профиль: ' + err.message);
-    }
-  });
-</script>
+    $('#city').on('input focus', suggest);
+    $(document).on('click', (e) => {
+      if (!$(e.target).closest('#city').length && !$(e.target).closest('#city-suggest').length) {
+        $('#city-suggest').removeClass('show');
+      }
+    });
+
+    // ====== Submit ======
+    $('form.needs-validation').on('submit', async function (e) {
+      e.preventDefault();
+
+      const name = $('#firstName').val().trim();
+      const date_local = $('#datepicker').val(); // yyyy-mm-dd
+      let time_local = $('#unknownTime').is(':checked') ? '12:00:00' : ($('#timepicker').val() || '');
+
+      if (!date_local) { alert('Укажите дату рождения.'); return; }
+      if (!time_local) time_local = '12:00:00';
+      else if (time_local.length === 5) time_local += ':00';
+
+      // В index.html, в обработчике submit:
+      const cityVal = $('#city').val().trim();
+      const hasUri = !!(selected && selected.uri);
+
+      if (!cityVal) {
+        alert('Укажите город.');
+        return;
+      }
+
+      // Проверка: был ли выбран город из подсказок
+      if (!selected) {
+        alert('Пожалуйста, выберите город из списка подсказок, а не просто вводите текст.');
+        return;
+      }
+
+      // --- Ежедневные транзиты: время и подписка ---
+      const subscribeDaily = $('#subscribeDaily').is(':checked');
+      const sendTimeRaw = $('#transitTime').val().trim();
+
+      // Если подписка включена, а время не указано — ругаемся
+      if (subscribeDaily && !sendTimeRaw) {
+        alert('Укажите время, когда отправлять ежедневный гороскоп по транзитам.');
+        return;
+      }
+
+      const basePayload = {
+        name,
+        lang: 'ru',
+        date_local,
+        time_local,
+        yandex_uri: selected.uri,
+        label: selected.label,
+        city: selected.label
+      };
+
+      // Полный payload для Telegram (с подпиской)
+      const tgPayload = { ...basePayload };
+
+      if (subscribeDaily && sendTimeRaw) {
+        // Боту/бэкенду ожидаем формат HH:MM
+        tgPayload.send_time = sendTimeRaw;
+        tgPayload.subscribe_daily = true;
+      }
+
+      // Если это WebApp в Telegram — отдаём данные в бота
+      if (tg) {
+        try {
+          tg.sendData(JSON.stringify(tgPayload));
+          tg.close();
+        } catch (err) {
+          alert('Ошибка отправки в Telegram WebApp: ' + err.message);
+        }
+        return;
+      }
+
+      // Фоллбек — прямой вызов API (без подписки, чисто натал)
+      try {
+        const r = await fetch(apiUrl('/natal/by_city'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(basePayload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || 'Ошибка запроса');
+        alert('Профиль сохранён: ' + (data.place?.display_name || 'ok'));
+      } catch (err) {
+        alert('Не удалось сохранить профиль: ' + err.message);
+      }
+
+    });
+  </script>
 
 
 </body>
