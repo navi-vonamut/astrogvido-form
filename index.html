@@ -230,87 +230,90 @@
     });
 
     // ====== Submit ======
-    $('form.needs-validation').on('submit', async function (e) {
-      e.preventDefault();
+     $('form.needs-validation').on('submit', async function (e) {
+    e.preventDefault();
 
-      const name = $('#firstName').val().trim();
-      const date_local = $('#datepicker').val(); // yyyy-mm-dd
-      let time_local = $('#unknownTime').is(':checked') ? '12:00:00' : ($('#timepicker').val() || '');
+    const name = $('#firstName').val().trim();
+    const date_local = $('#datepicker').val(); // yyyy-mm-dd
+    let time_local = $('#unknownTime').is(':checked')
+      ? '12:00:00'
+      : ($('#timepicker').val() || '');
 
-      if (!date_local) { alert('Укажите дату рождения.'); return; }
-      if (!time_local) time_local = '12:00:00';
-      else if (time_local.length === 5) time_local += ':00';
+    if (!date_local) {
+      alert('Укажите дату рождения.');
+      return;
+    }
 
-      // В index.html, в обработчике submit:
-      const cityVal = $('#city').val().trim();
-      const hasUri = !!(selected && selected.uri);
+    if (!time_local) time_local = '12:00:00';
+    else if (time_local.length === 5) time_local += ':00';
 
-      if (!cityVal) {
-        alert('Укажите город.');
-        return;
+    const cityVal = $('#city').val().trim();
+    if (!cityVal) {
+      alert('Укажите город.');
+      return;
+    }
+    if (!selected) {
+      alert('Пожалуйста, выберите город из списка подсказок, а не просто вводите текст.');
+      return;
+    }
+
+    // --- Ежедневные транзиты ---
+    const subscribeDaily = $('#subscribeDaily').is(':checked');
+    const sendTimeRaw = $('#transitTime').val().trim();
+
+    if (subscribeDaily && !sendTimeRaw) {
+      alert('Укажите время, когда отправлять ежедневный гороскоп по транзитам.');
+      return;
+    }
+
+    const basePayload = {
+      name,
+      lang: 'ru',
+      date_local,
+      time_local,
+      yandex_uri: selected.uri,
+      label: selected.label,
+      city: selected.label,
+    };
+
+    const profilePayload = { ...basePayload };
+
+    if (subscribeDaily && sendTimeRaw) {
+      profilePayload.send_time = sendTimeRaw;      // HH:MM
+      profilePayload.subscribe_daily = true;
+    }
+
+    // === Новый путь: отправляем всё на backend ===
+    // Предлагаю endpoint: POST /webapp/profile (можешь назвать как хочешь)
+    const body = {
+      init_data: INIT_DATA || null,  // initData из Telegram WebApp (или null вне Телеги)
+      profile: profilePayload,
+    };
+
+    try {
+      const r = await fetch(apiUrl('/webapp/profile'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const msg = data.detail || data.error || 'Ошибка сохранения профиля';
+        throw new Error(msg);
       }
 
-      // Проверка: был ли выбран город из подсказок
-      if (!selected) {
-        alert('Пожалуйста, выберите город из списка подсказок, а не просто вводите текст.');
-        return;
-      }
-
-      // --- Ежедневные транзиты: время и подписка ---
-      const subscribeDaily = $('#subscribeDaily').is(':checked');
-      const sendTimeRaw = $('#transitTime').val().trim();
-
-      // Если подписка включена, а время не указано — ругаемся
-      if (subscribeDaily && !sendTimeRaw) {
-        alert('Укажите время, когда отправлять ежедневный гороскоп по транзитам.');
-        return;
-      }
-
-      const basePayload = {
-        name,
-        lang: 'ru',
-        date_local,
-        time_local,
-        yandex_uri: selected.uri,
-        label: selected.label,
-        city: selected.label
-      };
-
-      // Полный payload для Telegram (с подпиской)
-      const tgPayload = { ...basePayload };
-
-      if (subscribeDaily && sendTimeRaw) {
-        // Боту/бэкенду ожидаем формат HH:MM
-        tgPayload.send_time = sendTimeRaw;
-        tgPayload.subscribe_daily = true;
-      }
-
-      // Если это WebApp в Telegram — отдаём данные в бота
+      // Можно показать что-то человеку
       if (tg) {
-        try {
-          tg.sendData(JSON.stringify(tgPayload));
-          tg.close();
-        } catch (err) {
-          alert('Ошибка отправки в Telegram WebApp: ' + err.message);
-        }
-        return;
+        // В Telegram лучше не алертить, а просто закрывать и дать бот-ответ
+        tg.close();
+      } else {
+        alert('Профиль сохранён ✅');
       }
-
-      // Фоллбек — прямой вызов API (без подписки, чисто натал)
-      try {
-        const r = await fetch(apiUrl('/natal/by_city'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(basePayload)
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.detail || 'Ошибка запроса');
-        alert('Профиль сохранён: ' + (data.place?.display_name || 'ok'));
-      } catch (err) {
-        alert('Не удалось сохранить профиль: ' + err.message);
-      }
-
-    });
+    } catch (err) {
+      alert('Не удалось сохранить профиль: ' + err.message);
+    }
+  });
   </script>
 
 
