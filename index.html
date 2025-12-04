@@ -114,126 +114,165 @@
     </main>
   </div>
 
-  <script>
-    // ====== Telegram SDK ======
-    const tg = window.Telegram?.WebApp;
-    tg?.ready();
+<script>
+  // ====== Telegram SDK ======
+  const tg = window.Telegram?.WebApp;
+  tg?.ready();
 
-    function pickInitData() {
-      // 1) WebApp.initData
-      if (tg?.initData && tg.initData.length > 0) return tg.initData;
-      // 2) query ?init_data=...
-      const sp = new URLSearchParams(location.search);
-      const q1 = sp.get('init_data') || sp.get('tgWebAppData');
-      if (q1) return q1;
-      // 3) hash #tgWebAppData=...
-      const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
-      const q2 = hp.get('init_data') || hp.get('tgWebAppData');
-      if (q2) return q2;
-      return '';
-    }
-    const INIT_DATA = pickInitData();
+  function pickInitData() {
+    // 1) WebApp.initData (основной вариант)
+    if (tg?.initData && tg.initData.length > 0) return tg.initData;
+    // 2) query ?init_data=...
+    const sp = new URLSearchParams(location.search);
+    const q1 = sp.get('init_data') || sp.get('tgWebAppData');
+    if (q1) return q1;
+    // 3) hash #tgWebAppData=...
+    const hp = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash);
+    const q2 = hp.get('init_data') || hp.get('tgWebAppData');
+    if (q2) return q2;
+    return '';
+  }
 
-    // ====== API base ======
-    function getApiBase() {
-      const qs = new URLSearchParams(location.search);
-      const fromQS = qs.get('api');
-      const fromMeta = document.querySelector('meta[name="api-base"]')?.content;
-      const fallback = 'https://api.astrogvido.ru/';
-      const base = (fromQS || fromMeta || fallback).trim();
-      return base.endsWith('/') ? base : base + '/';
-    }
-    const API_BASE = getApiBase();
+  const INIT_DATA = pickInitData();
 
-    function apiUrl(path, params) {
-      const u = new URL(path, API_BASE);
-      if (params) {
-        for (const [k, v] of Object.entries(params)) {
-          if (v !== undefined && v !== null) u.searchParams.set(k, String(v));
-        }
+  // ====== API base ======
+  function getApiBase() {
+    const qs = new URLSearchParams(location.search);
+    const fromQS = qs.get('api');
+    const fromMeta = document.querySelector('meta[name="api-base"]')?.content;
+    const fallback = 'https://api.astrogvido.ru/';
+    const base = (fromQS || fromMeta || fallback).trim();
+    return base.endsWith('/') ? base : base + '/';
+  }
+  const API_BASE = getApiBase();
+
+  function apiUrl(path, params) {
+    const u = new URL(path, API_BASE);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v !== undefined && v !== null) u.searchParams.set(k, String(v));
       }
-      return u.toString();
     }
+    return u.toString();
+  }
 
-    // ====== Suggest (как было) ======
-    const DEBOUNCE_MS = 250;
-    const MIN_QUERY = 2;
-    const SESSIONTOKEN = (self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
-    let SUGGEST_LL = null, SUGGEST_SPN = null;
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        ({ coords: { latitude, longitude } }) => {
-          SUGGEST_LL = `${longitude.toFixed(4)},${latitude.toFixed(4)}`;
-          SUGGEST_SPN = '10,8';
-        },
-        () => { },
-        { maximumAge: 60_000, timeout: 2_000, enableHighAccuracy: false }
-      );
-    }
+  // ====== Suggest (как было) ======
+  const DEBOUNCE_MS = 250;
+  const MIN_QUERY = 2;
+  const SESSIONTOKEN = (self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
+  let SUGGEST_LL = null, SUGGEST_SPN = null;
 
-    function debounce(fn, ms) {
-      let t;
-      return (...args) => {
-        clearTimeout(t);
-        t = setTimeout(() => fn(...args), ms);
-      };
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      ({ coords: { latitude, longitude } }) => {
+        SUGGEST_LL = `${longitude.toFixed(4)},${latitude.toFixed(4)}`;
+        SUGGEST_SPN = '10,8';
+      },
+      () => { },
+      { maximumAge: 60_000, timeout: 2_000, enableHighAccuracy: false }
+    );
+  }
+
+  let selected = null;
+
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), ms);
+    };
+  }
+
+  function renderSuggestions(items) {
+    const $drop = $('#city-suggest');
+    $drop.empty();
+    if (!items || !items.length) {
+      $drop.removeClass('show');
+      return;
     }
-    function renderSuggestions(items) {
-      const $drop = $('#city-suggest');
-      $drop.empty();
-      if (!items || !items.length) { $drop.removeClass('show'); return; }
-      items.forEach(it => {
-        const $a = $('<a class="dropdown-item" href="#"></a>').text(it.label);
-        $a.on('click', (e) => {
-          e.preventDefault();
-          selected = it;
-          $('#city').val(it.label);
-          $drop.removeClass('show');
-        });
-        $drop.append($a);
+    items.forEach(it => {
+      const $a = $('<a class="dropdown-item" href="#"></a>').text(it.label);
+      $a.on('click', (e) => {
+        e.preventDefault();
+        selected = it;
+        $('#city').val(it.label);
+        $drop.removeClass('show');
       });
-      $drop.addClass('show');
+      $drop.append($a);
+    });
+    $drop.addClass('show');
+  }
+
+  const suggest = debounce(async function () {
+    selected = null;
+    const text = $('#city').val().trim();
+    if (text.length < MIN_QUERY) {
+      $('#city-suggest').removeClass('show');
+      return;
     }
 
-    const suggest = debounce(async function () {
-      selected = null;
-      const text = $('#city').val().trim();
-      if (text.length < MIN_QUERY) { $('#city-suggest').removeClass('show'); return; }
+    const params = {
+      text,
+      lang: 'ru_RU',
+      results: 8,
+      types: 'geo',
+      print_address: 1,
+      attrs: 'uri',
+      sessiontoken: SESSIONTOKEN
+    };
+    if (SUGGEST_LL) params.ll = SUGGEST_LL;
+    if (SUGGEST_SPN) params.spn = SUGGEST_SPN;
 
-      const params = {
-        text,
-        lang: 'ru_RU',
-        results: 8,
-        types: 'geo',
-        print_address: 1,
-        attrs: 'uri',
-        sessiontoken: SESSIONTOKEN
-      };
-      if (SUGGEST_LL) params.ll = SUGGEST_LL;
-      if (SUGGEST_SPN) params.spn = SUGGEST_SPN;
+    try {
+      const url = apiUrl('/places/suggest_ya', params);
+      const r = await fetch(url, { cache: 'no-store' });
+      const data = await r.json();
+      renderSuggestions(data.items || []);
+    } catch (e) {
+      $('#city-suggest').removeClass('show');
+    }
+  }, DEBOUNCE_MS);
 
-      try {
-        const url = apiUrl('/places/suggest_ya', params);
-        const r = await fetch(url, { cache: 'no-store' });
-        const data = await r.json();
-        renderSuggestions(data.items || []);
-      } catch (e) {
-        $('#city-suggest').removeClass('show');
+  $('#city').on('input focus', suggest);
+  $(document).on('click', (e) => {
+    if (!$(e.target).closest('#city').length && !$(e.target).closest('#city-suggest').length) {
+      $('#city-suggest').removeClass('show');
+    }
+  });
+
+  // ====== Загрузка профиля (GET /tg/profile) — по желанию ======
+  async function loadProfileFromApi() {
+    if (!INIT_DATA) return; // если не из Telegram — пропускаем
+
+    try {
+      const url = apiUrl('/tg/profile', { init_data: INIT_DATA });
+      const r = await fetch(url, { cache: 'no-store' });
+      const data = await r.json();
+
+      if (!data.profile) return;
+      const p = data.profile;
+
+      if (p.date) $('#datepicker').val(p.date);
+      if (p.time) $('#timepicker').val(p.time.slice(0, 5)); // HH:MM:SS -> HH:MM
+      if (p.send_time) {
+        $('#transitTime').val(p.send_time);
       }
-    }, DEBOUNCE_MS);
+      // город мы сейчас обратно не восстанавливаем (нет label в ответе),
+      // можно потом добавить, если будешь это хранить.
+    } catch (e) {
+      console.warn('Не удалось загрузить профиль:', e);
+    }
+  }
 
-    $('#city').on('input focus', suggest);
-    $(document).on('click', (e) => {
-      if (!$(e.target).closest('#city').length && !$(e.target).closest('#city-suggest').length) {
-        $('#city-suggest').removeClass('show');
-      }
-    });
+  $(document).ready(() => {
+    loadProfileFromApi();
+  });
 
-    // ====== Submit ======
-     $('form.needs-validation').on('submit', async function (e) {
+  // ====== Submit ======
+  $('form.needs-validation').on('submit', async function (e) {
     e.preventDefault();
 
-    const name = $('#firstName').val().trim();
+    const name = $('#firstName').val().trim(); // пока никуда не шлём, только в будущем
     const date_local = $('#datepicker').val(); // yyyy-mm-dd
     let time_local = $('#unknownTime').is(':checked')
       ? '12:00:00'
@@ -245,27 +284,29 @@
     }
 
     if (!time_local) time_local = '12:00:00';
-    else if (time_local.length === 5) time_local += ':00';
+    else if (time_local.length === 5) time_local += ':00'; // HH:MM -> HH:MM:00
 
     const cityVal = $('#city').val().trim();
     if (!cityVal) {
       alert('Укажите город.');
       return;
     }
+
     if (!selected) {
       alert('Пожалуйста, выберите город из списка подсказок, а не просто вводите текст.');
       return;
     }
 
     // --- Ежедневные транзиты ---
-    const subscribeDaily = $('#subscribeDaily').is(':checked');
     const sendTimeRaw = $('#transitTime').val().trim();
+    // (чекбокса у нас нет — если поле заполнено, значит, человек хочет рассылку)
+    const subscribeDaily = !!sendTimeRaw;
 
-    if (subscribeDaily && !sendTimeRaw) {
-      alert('Укажите время, когда отправлять ежедневный гороскоп по транзитам.');
-      return;
-    }
-
+    // 1) Сначала ходим в /natal/by_city, чтобы backend сам:
+    //    - геокодил город,
+    //    - нашёл таймзону,
+    //    - посчитал исторический UTC offset,
+    //    - вернул lat/lon + utc_offset_str.
     const basePayload = {
       name,
       lang: 'ru',
@@ -273,39 +314,65 @@
       time_local,
       yandex_uri: selected.uri,
       label: selected.label,
-      city: selected.label,
+      city: selected.label
     };
 
-    const profilePayload = { ...basePayload };
-
-    if (subscribeDaily && sendTimeRaw) {
-      profilePayload.send_time = sendTimeRaw;      // HH:MM
-      profilePayload.subscribe_daily = true;
-    }
-
-    // === Новый путь: отправляем всё на backend ===
-    // Предлагаю endpoint: POST /webapp/profile (можешь назвать как хочешь)
-    const body = {
-      init_data: INIT_DATA || null,  // initData из Telegram WebApp (или null вне Телеги)
-      profile: profilePayload,
-    };
-
+    let place;
     try {
-      const r = await fetch(apiUrl('/webapp/profile'), {
+      const rNatal = await fetch(apiUrl('/natal/by_city'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(basePayload)
       });
+      const natalData = await rNatal.json();
+      if (!rNatal.ok) {
+        throw new Error(natalData.detail || natalData.error || 'Ошибка расчёта натальной карты');
+      }
+      place = natalData.place;
+      if (!place || place.lat == null || place.lon == null || !place.utc_offset_str) {
+        throw new Error('Сервис не вернул координаты и часовой пояс.');
+      }
+    } catch (err) {
+      alert('Не удалось определить место и время рождения: ' + err.message);
+      return;
+    }
 
+    // 2) Если форма открыта НЕ из Telegram — просто покажем, что всё ок,
+    //    а профиль в боте сохранять некуда.
+    if (!tg || !INIT_DATA) {
+      alert('Профиль рассчитан: ' + (place.display_name || 'ok') + '\nОткройте эту форму из Telegram-бота, чтобы сохранить профиль.');
+      return;
+    }
+
+    // 3) Собираем payload под /tg/profile (ProfileUpdate)
+    const profilePayload = {
+      date: date_local,          // /tg/profile сам нормализует
+      time: time_local,          // "HH:MM:SS" или "HH:MM"
+      tz: place.utc_offset_str,  // "+03:00" и т.п.
+      lat: place.lat,
+      lon: place.lon
+    };
+
+    if (subscribeDaily && sendTimeRaw) {
+      profilePayload.send_time = sendTimeRaw; // формат HH:MM, как требует backend
+    } else {
+      profilePayload.send_time = null;
+    }
+
+    try {
+      const url = apiUrl('/tg/profile', { init_data: INIT_DATA });
+      const r = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profilePayload)
+      });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
-        const msg = data.detail || data.error || 'Ошибка сохранения профиля';
-        throw new Error(msg);
+        throw new Error(data.detail || data.error || 'Ошибка сохранения профиля');
       }
 
-      // Можно показать что-то человеку
+      // В Telegram: тихо закрываем форму, бот дальше уже работает с профилем из Sub.
       if (tg) {
-        // В Telegram лучше не алертить, а просто закрывать и дать бот-ответ
         tg.close();
       } else {
         alert('Профиль сохранён ✅');
@@ -314,7 +381,8 @@
       alert('Не удалось сохранить профиль: ' + err.message);
     }
   });
-  </script>
+</script>
+
 
 
 </body>
