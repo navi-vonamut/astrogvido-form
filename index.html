@@ -136,14 +136,19 @@
   const INIT_DATA = pickInitData();
 
   // ====== API base ======
-  function getApiBase() {
-    const qs = new URLSearchParams(location.search);
-    const fromQS = qs.get('api');
-    const fromMeta = document.querySelector('meta[name="api-base"]')?.content;
-    const fallback = 'https://api.astrogvido.ru/';
-    const base = (fromQS || fromMeta || fallback).trim();
-    return base.endsWith('/') ? base : base + '/';
+function getApiBase() {
+  const qs = new URLSearchParams(location.search);
+  const env = (qs.get('env') || 'prod').toLowerCase();
+
+  // Маппинг окружений на API
+  if (env === 'dev') {
+    return 'https://dev-api.astrogvido.ru/';   // dev API
   }
+
+  // по умолчанию считаем, что прод
+  return 'https://api.astrogvido.ru/';         // prod API
+}
+
   const API_BASE = getApiBase();
 
   function apiUrl(path, params) {
