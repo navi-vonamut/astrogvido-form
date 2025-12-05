@@ -12,7 +12,6 @@
   <script src="javascript/bootstrap.bundle.min.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <meta name="api-base" content="https://api.astrogvido.ru">
 
 
   <style>
@@ -136,18 +135,28 @@
   const INIT_DATA = pickInitData();
 
   // ====== API base ======
-function getApiBase() {
-  const qs = new URLSearchParams(location.search);
-  const env = (qs.get('env') || 'prod').toLowerCase();
+  function getApiBase() {
+    const qs = new URLSearchParams(location.search);
 
-  // Маппинг окружений на API
-  if (env === 'dev') {
-    return 'https://dev-api.astrogvido.ru/';   // dev API
+    // 1. Если явно передали ?api=..., уважаем это (для ручных тестов)
+    const explicitApi = qs.get('api');
+    if (explicitApi) {
+      const base = explicitApi.trim();
+      return base.endsWith('/') ? base : base + '/';
+    }
+
+    // 2. env=dev / env=prod (или что-то похожее)
+    const env = (qs.get('env') || 'prod').toLowerCase();
+
+    if (env === 'dev') {
+      // ТУТ подставь свой реальный dev-API
+      return 'https://dev-api.astrogvido.ru/';
+    }
+
+    // По умолчанию — прод
+    return 'https://api.astrogvido.ru/';
   }
 
-  // по умолчанию считаем, что прод
-  return 'https://api.astrogvido.ru/';         // prod API
-}
 
   const API_BASE = getApiBase();
 
