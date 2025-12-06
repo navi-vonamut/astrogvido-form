@@ -256,7 +256,7 @@
 
   // ====== Загрузка профиля (GET /tg/profile) — по желанию ======
   async function loadProfileFromApi() {
-    if (!INIT_DATA) return; // если не из Telegram — пропускаем
+    if (!INIT_DATA) return;
 
     try {
       const url = apiUrl('/tg/profile', { init_data: INIT_DATA });
@@ -266,17 +266,46 @@
       if (!data.profile) return;
       const p = data.profile;
 
-      if (p.date) $('#datepicker').val(p.date);
-      if (p.time) $('#timepicker').val(p.time.slice(0, 5)); // HH:MM:SS -> HH:MM
+      // Дата
+      if (p.date) {
+        let d = String(p.date).trim();
+        d = d.replace(/[./]/g, '-');     // 1990/05/03 -> 1990-05-03
+        $('#datepicker').val(d);
+      }
+
+      // Время
+      if (p.time) {
+        $('#timepicker').val(String(p.time).slice(0, 5)); // HH:MM:SS -> HH:MM
+      }
+
+      // Имя
+      if (p.name) {
+        $('#firstName').val(p.name);
+      }
+
+      // Город
+      if (p.city || p.label) {
+        const cityText = p.label || p.city;
+        $('#city').val(cityText);
+
+        // Можно попытаться частично восстановить selected,
+        // чтобы не заставлять юзера кликать ещё раз
+        selected = {
+          label: cityText,
+          uri: p.yandex_uri || null,
+          // lat/lon/tz можем взять из p / place, если будешь их тоже возвращать
+        };
+      }
+
+      // Время рассылки
       if (p.send_time) {
         $('#transitTime').val(p.send_time);
       }
-      // город мы сейчас обратно не восстанавливаем (нет label в ответе),
-      // можно потом добавить, если будешь это хранить.
     } catch (e) {
       console.warn('Не удалось загрузить профиль:', e);
     }
   }
+
 
   $(document).ready(() => {
     loadProfileFromApi();
@@ -358,20 +387,24 @@
       return;
     }
 
-    // 3) Собираем payload под /tg/profile (ProfileUpdate)
     const profilePayload = {
-      date: date_local,          // /tg/profile сам нормализует
-      time: time_local,          // "HH:MM:SS" или "HH:MM"
-      tz: place.utc_offset_str,  // "+03:00" и т.п.
+      date: date_local,
+      time: time_local,
+      tz: place.utc_offset_str,
       lat: place.lat,
-      lon: place.lon
+      lon: place.lon,
+      name: name || null,
+      city: cityVal || (place.display_name || null),
+      yandex_uri: selected.uri || null,
+      label: selected.label || cityVal || null,
     };
 
     if (subscribeDaily && sendTimeRaw) {
-      profilePayload.send_time = sendTimeRaw; // формат HH:MM, как требует backend
+      profilePayload.send_time = sendTimeRaw;
     } else {
       profilePayload.send_time = null;
     }
+
 
     try {
       const url = apiUrl('/tg/profile', { init_data: INIT_DATA });
