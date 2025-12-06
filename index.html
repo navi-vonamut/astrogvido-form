@@ -134,6 +134,23 @@
 
   const INIT_DATA = pickInitData();
 
+  function parseTelegramUserFromInitData() {
+    if (!INIT_DATA) return null;
+
+    // INIT_DATA — это строка формата query: "query_id=...&user=%7B...%7D&auth_date=...&hash=..."
+    const params = new URLSearchParams(INIT_DATA);
+    const userJson = params.get('user');
+    if (!userJson) return null;
+
+    try {
+      return JSON.parse(userJson);
+    } catch (e) {
+      console.warn('Не удалось распарсить user из init_data:', e);
+      return null;
+    }
+  }
+
+
   // ====== API base ======
   function getApiBase() {
     const qs = new URLSearchParams(location.search);
@@ -308,8 +325,28 @@
 
 
   $(document).ready(() => {
+    // 1) Сначала пробуем подгрузить профиль из API (если есть)
     loadProfileFromApi();
+
+    // 2) Если имени в форме нет — попробуем достать его из Telegram
+    const tgUser = parseTelegramUserFromInitData();
+    if (tgUser) {
+      const fullName = [
+        tgUser.first_name || '',
+        tgUser.last_name || '',
+      ].join(' ').trim();
+
+      const username = tgUser.username ? tgUser.username.trim() : '';
+
+      // Приоритет: fullName -> username -> ничего
+      const suggestedName = fullName || username || '';
+
+      if (suggestedName && !$('#firstName').val().trim()) {
+        $('#firstName').val(suggestedName);
+      }
+    }
   });
+
 
   // ====== Submit ======
   $('form.needs-validation').on('submit', async function (e) {
