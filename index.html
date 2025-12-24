@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-bs-theme="dark">
 
 <head>
   <meta charset="UTF-8" />
@@ -29,6 +29,78 @@
       color: #9aa0a6;
       font-size: 0.875rem;
     }
+
+    /* Общий фон */
+body {
+  background: radial-gradient(
+    circle at top,
+    #1b1f2a 0%,
+    #0f1117 60%,
+    #0b0d12 100%
+  );
+}
+
+/* Карточка формы */
+.card {
+  background-color: #141824;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Заголовки */
+h1, h4 {
+  color: #e9ecf1;
+}
+
+/* Вторичный текст */
+.lead,
+.hint,
+.form-text {
+  color: #b6bccd;
+}
+
+/* Инпуты */
+.form-control {
+  background-color: #0f1320;
+  border-color: #2a2f45;
+  color: #e9ecf1;
+}
+
+.form-control::placeholder {
+  color: #7f86a3;
+}
+
+/* Фокус */
+.form-control:focus {
+  background-color: #0f1320;
+  border-color: #6ea8fe;
+  box-shadow: 0 0 0 0.25rem rgba(110, 168, 254, 0.25);
+}
+
+/* Primary-кнопка */
+.btn-primary {
+  background: linear-gradient(135deg, #5c7cfa, #4dabf7);
+  border: none;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+/* Dropdown (подсказки города) */
+.dropdown-menu {
+  background-color: #141824;
+  border-color: #2a2f45;
+}
+
+.dropdown-item {
+  color: #e9ecf1;
+}
+
+.dropdown-item:hover {
+  background-color: #1f2440;
+}
+
   </style>
 </head>
 
@@ -36,64 +108,72 @@
   <div class="container">
     <main>
       <div class="p-3 text-center">
-        <img class="d-block mx-auto mb-4" src="image/cute-chibi-style-fantasy-creature-inspired-by-taur (1).png" alt=""
+        <img class="d-block mx-auto mb-4" src="image/logo.png" alt="logo"
           width="72" height="72">
-        <h1 class="h2">Данные о дне рождения</h1>
-        <p class="lead">Укажите имя, город рождения, дату и время. Если время неизвестно — поставим «солнечную» карту
-          (12:00).</p>
+        <h1 class="h2" id="pageTitle" data-i18n="title">Данные о дне рождения</h1>
+        <p class="lead" id="pageLead" data-i18n="lead">
+          Укажите имя, город рождения, дату и время. Если время неизвестно — поставим «солнечную» карту (12:00).
+        </p>
       </div>
+
       <div class="row justify-content-center g-4">
         <div class="col-12 col-lg-6">
           <div class="card">
             <div class="card-body">
               <div class="row g-5">
                 <div class="col-md-12">
-                  <h4 class="mb-3 card-title">Натальная карта</h4>
+                  <h4 class="mb-3 card-title" data-i18n="natalTitle">Натальная карта</h4>
+
                   <form class="needs-validation" novalidate>
                     <div class="row g-3">
                       <div class="col-12">
-                        <label for="firstName" class="form-label">Имя (необязательно)</label>
-                        <input type="text" class="form-control" id="firstName" placeholder="Например: Анна">
+                        <label for="firstName" class="form-label" data-i18n="nameLabel">Имя (необязательно)</label>
+                        <input type="text" class="form-control" id="firstName" placeholder="Например: Анна"
+                          data-i18n-placeholder="namePh">
                       </div>
 
                       <div class="col-12 city-wrap">
-                        <label for="city" class="form-label">Город / населённый пункт</label>
+                        <label for="city" class="form-label" data-i18n="cityLabel">Город / населённый пункт</label>
                         <input type="text" class="form-control" id="city" placeholder="Начните вводить…"
-                          autocomplete="off" required>
+                          data-i18n-placeholder="cityPh" autocomplete="off" required>
                         <!-- выпадающее меню подсказок -->
                         <div id="city-suggest" class="dropdown-menu w-100"></div>
-                        <div class="invalid-feedback">Укажите город из списка.</div>
+                        <div class="invalid-feedback" data-i18n="cityInvalid">Укажите город из списка.</div>
                       </div>
 
                       <div class="col-6">
-                        <label class="form-label">Дата рождения</label>
+                        <label class="form-label" for="datepicker" data-i18n="dateLabel">Дата рождения</label>
                         <input type="date" class="form-control" id="datepicker" required />
                       </div>
 
                       <div class="col-6">
-                        <label class="form-label">Время рождения</label>
+                        <label class="form-label" for="timepicker" data-i18n="timeLabel">Время рождения</label>
                         <input type="time" class="form-control" id="timepicker" required />
                         <div class="form-check mt-2">
                           <input class="form-check-input" type="checkbox" id="unknownTime">
-                          <label class="form-check-label" for="unknownTime">Не знаю время (поставим 12:00)</label>
+                          <label class="form-check-label" for="unknownTime" data-i18n="unknownTime">
+                            Не знаю время (поставим 12:00)
+                          </label>
                         </div>
                       </div>
                     </div>
+
                     <div class="col-12">
                       <hr class="my-4" />
-                      <h4 class="mb-3">Ежедневный гороскоп по транзитам</h4>
+                      <h4 class="mb-3" data-i18n="dailyTitle">Ежедневный гороскоп по транзитам</h4>
                       <div class="row g-3">
                         <div class="col-md-6">
-                          <label class="form-label" for="transitTime">Время отправки</label>
+                          <label class="form-label" for="transitTime" data-i18n="transitTimeLabel">Время
+                            отправки</label>
                           <input type="time" class="form-control" id="transitTime" />
-                          <div class="hint mt-1">
+                          <div class="hint mt-1" data-i18n="transitHint">
                             В это время вы будете получать ежедневную интерпретацию транзитов.
                           </div>
                         </div>
                         <div class="col-md-6 d-flex align-items-center">
                           <div class="form-check mt-3">
                             <input class="form-check-input" type="checkbox" id="subscribeDaily">
-                            <label class="form-check-label" for="subscribeDaily">
+                            <label class="form-check-label" for="subscribeDaily" data-i18n="subscribeDaily">
                               Подписаться на ежедневный гороскоп
                             </label>
                           </div>
@@ -102,8 +182,11 @@
                     </div>
 
                     <hr class="my-4" />
-                    <button class="w-100 btn btn-primary btn-lg" type="submit">Сохранить</button>
+                    <button class="w-100 btn btn-primary btn-lg" id="saveBtn" type="submit" data-i18n="save">
+                      Сохранить
+                    </button>
                   </form>
+
                 </div>
               </div>
             </div>
@@ -112,11 +195,209 @@
       </div>
     </main>
   </div>
+</body>
 
 <script>
   // ====== Telegram SDK ======
   const tg = window.Telegram?.WebApp;
   tg?.ready();
+
+  
+  if (tg?.colorScheme === 'dark') {
+    document.documentElement.setAttribute('data-bs-theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-bs-theme', 'light');
+  }
+
+  const SUPPORTED_LANGS = new Set(['ru', 'en', 'es', 'pt']);
+
+  function normalizeLang(code) {
+    const c = String(code || '').toLowerCase().trim();
+    const base = c.split('-')[0];
+    return SUPPORTED_LANGS.has(base) ? base : 'ru';
+  }
+
+  function getTelegramLangFast() {
+    const lc = tg?.initDataUnsafe?.user?.language_code;
+    return lc ? normalizeLang(lc) : null;
+  }
+
+  function suggestLangForYa(lang) {
+    if (lang === 'ru') return 'ru_RU';
+    if (lang === 'es') return 'es_ES';
+    if (lang === 'pt') return 'pt_BR';
+    return 'en_US';
+  }
+
+  let UI_LANG = getTelegramLangFast() || 'ru';
+  document.documentElement.lang = UI_LANG;
+
+  const I18N = {
+ru: {
+  title: "Данные о дне рождения",
+  lead: "Укажите имя, город рождения, дату и время. Если время неизвестно — поставим «солнечную» карту (12:00).",
+
+  natalTitle: "Натальная карта",
+  dailyTitle: "Ежедневный гороскоп по транзитам",
+  transitHint: "В это время вы будете получать ежедневную интерпретацию транзитов.",
+  cityInvalid: "Укажите город из списка.",
+
+  nameLabel: "Имя (необязательно)",
+  namePh: "Например: Анна",
+
+  cityLabel: "Город / населённый пункт",
+  cityPh: "Начните вводить…",
+
+  dateLabel: "Дата рождения",
+  timeLabel: "Время рождения",
+  unknownTime: "Не знаю время (поставим 12:00)",
+
+  subscribeDaily: "Присылать ежедневные транзиты",
+  transitTimeLabel: "Время рассылки",
+  save: "Сохранить",
+
+  errDate: "Укажите дату рождения.",
+  errCity: "Укажите город.",
+  errPickFromList: "Пожалуйста, выберите город из подсказок, а не просто введите текст.",
+  savedOk: "Сохранено ✅",
+  savedFail: "Не удалось сохранить 😔 Попробуйте позже.",
+
+  loading: "Загрузка…",
+  saving: "Сохраняю…",
+  errNetwork: "Сеть шалит 😵‍💫 Проверьте интернет и попробуйте ещё раз.",
+  errInitDataMissing: "Не удалось получить данные Telegram (init_data). Откройте форму из бота.",
+  errServer: "Сервер вернул ошибку. Попробуйте позже."
+},
+
+en: {
+  title: "Birth details",
+  lead: "Enter your name, birthplace, date and time. If time is unknown, we’ll use 12:00.",
+
+  natalTitle: "Natal chart",
+  dailyTitle: "Daily transits horoscope",
+  transitHint: "At this time you will receive a daily interpretation of transits.",
+  cityInvalid: "Please choose a city from the list.",
+
+  nameLabel: "Name (optional)",
+  namePh: "For example: Anna",
+
+  cityLabel: "City / locality",
+  cityPh: "Start typing…",
+
+  dateLabel: "Birth date",
+  timeLabel: "Birth time",
+  unknownTime: "I don't know the time (use 12:00)",
+
+  subscribeDaily: "Send daily transits",
+  transitTimeLabel: "Delivery time",
+  save: "Save",
+
+  errDate: "Please enter a birth date.",
+  errCity: "Please enter a city.",
+  errPickFromList: "Please pick a city from suggestions (don’t just type it).",
+  savedOk: "Saved ✅",
+  savedFail: "Failed to save 😔 Please try again.",
+
+  loading: "Loading…",
+  saving: "Saving…",
+  errNetwork: "Network error 😵‍💫 Check your connection and try again.",
+  errInitDataMissing: "Couldn’t get Telegram init_data. Please open this form from the bot.",
+  errServer: "Server error. Please try again later."
+},
+
+es: {
+  title: "Datos de nacimiento",
+  lead: "Indica tu nombre, ciudad de nacimiento, fecha y hora. Si no sabes la hora, usaremos 12:00.",
+
+  natalTitle: "Carta natal",
+  dailyTitle: "Horóscopo diario por tránsitos",
+  transitHint: "A esta hora recibirás una interpretación diaria de los tránsitos.",
+  cityInvalid: "Elige una ciudad de la lista.",
+
+  nameLabel: "Nombre (opcional)",
+  namePh: "Por ejemplo: Ana",
+
+  cityLabel: "Ciudad / localidad",
+  cityPh: "Empieza a escribir…",
+
+  dateLabel: "Fecha de nacimiento",
+  timeLabel: "Hora de nacimiento",
+  unknownTime: "No sé la hora (usar 12:00)",
+
+  subscribeDaily: "Enviar tránsitos diarios",
+  transitTimeLabel: "Hora de envío",
+  save: "Guardar",
+
+  errDate: "Indica la fecha de nacimiento.",
+  errCity: "Indica la ciudad.",
+  errPickFromList: "Elige una ciudad de las sugerencias (no la escribas solo).",
+  savedOk: "Guardado ✅",
+  savedFail: "No se pudo guardar 😔 Inténtalo de nuevo.",
+
+  loading: "Cargando…",
+  saving: "Guardando…",
+  errNetwork: "Error de red 😵‍💫 Revisa tu conexión e inténtalo de nuevo.",
+  errInitDataMissing: "No se pudo obtener init_data de Telegram. Abre el formulario desde el bot.",
+  errServer: "Error del servidor. Inténtalo más tarde."
+},
+
+pt: {
+  title: "Dados de nascimento",
+  lead: "Informe seu nome, cidade de nascimento, data e hora. Se não souber a hora, usaremos 12:00.",
+
+  natalTitle: "Mapa natal",
+  dailyTitle: "Horóscopo diário por trânsitos",
+  transitHint: "Nesse horário você receberá uma interpretação diária dos trânsitos.",
+  cityInvalid: "Escolha uma cidade da lista.",
+
+  nameLabel: "Nome (opcional)",
+  namePh: "Por exemplo: Ana",
+
+  cityLabel: "Cidade / localidade",
+  cityPh: "Comece a digitar…",
+
+  dateLabel: "Data de nascimento",
+  timeLabel: "Hora de nascimento",
+  unknownTime: "Não sei a hora (usar 12:00)",
+
+  subscribeDaily: "Enviar trânsitos diários",
+  transitTimeLabel: "Horário de envio",
+  save: "Salvar",
+
+  errDate: "Informe a data de nascimento.",
+  errCity: "Informe a cidade.",
+  errPickFromList: "Escolha uma cidade nas sugestões (não apenas digite).",
+  savedOk: "Salvo ✅",
+  savedFail: "Não foi possível salvar 😔 Tente novamente.",
+
+  loading: "Carregando…",
+  saving: "Salvando…",
+  errNetwork: "Erro de rede 😵‍💫 Verifique sua conexão e tente novamente.",
+  errInitDataMissing: "Não foi possível obter o init_data do Telegram. Abra este formulário pelo bot.",
+  errServer: "Erro no servidor. Tente novamente mais tarde."
+}
+};
+
+function t(key) {
+  return (I18N[UI_LANG] && I18N[UI_LANG][key]) || (I18N.ru && I18N.ru[key]) || key;
+}
+
+function applyI18n() {
+  // текстовые узлы
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    el.textContent = t(key);
+  });
+
+  // placeholder
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    el.setAttribute("placeholder", t(key));
+  });
+
+  // можно расширить на title/aria-label при необходимости
+}
+
 
   function pickInitData() {
     // 1) WebApp.initData (основной вариант)
@@ -193,17 +474,6 @@
   const SESSIONTOKEN = (self.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
   let SUGGEST_LL = null, SUGGEST_SPN = null;
 
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      ({ coords: { latitude, longitude } }) => {
-        SUGGEST_LL = `${longitude.toFixed(4)},${latitude.toFixed(4)}`;
-        SUGGEST_SPN = '10,8';
-      },
-      () => { },
-      { maximumAge: 60_000, timeout: 2_000, enableHighAccuracy: false }
-    );
-  }
-
   let selected = null;
 
   function debounce(fn, ms) {
@@ -244,7 +514,7 @@
 
     const params = {
       text,
-      lang: 'ru_RU',
+      lang: suggestLangForYa(UI_LANG),
       results: 8,
       types: 'geo',
       print_address: 1,
@@ -258,6 +528,7 @@
       const url = apiUrl('/places/suggest_ya', params);
       const r = await fetch(url, { cache: 'no-store' });
       const data = await r.json();
+
       renderSuggestions(data.items || []);
     } catch (e) {
       $('#city-suggest').removeClass('show');
@@ -273,15 +544,44 @@
 
   // ====== Загрузка профиля (GET /tg/profile) — по желанию ======
   async function loadProfileFromApi() {
-    if (!INIT_DATA) return;
+    if (!INIT_DATA) {
+      showAlert(t('errInitDataMissing'), 'danger');
+      return;
+    }
 
     try {
       const url = apiUrl('/tg/profile', { init_data: INIT_DATA });
       const r = await fetch(url, { cache: 'no-store' });
       const data = await r.json();
 
+      const savedLang = data?.settings?.lang;
+      if (savedLang) {
+        UI_LANG = normalizeLang(savedLang);
+        document.documentElement.lang = UI_LANG;
+        applyI18n();
+      }
+
+
       if (!data.profile) return;
       const p = data.profile;
+
+      // ====== Daily transit subscription ======
+      // Если send_time сохранён — значит подписка включена
+      if (p.send_time) {
+        $('#subscribeDaily').prop('checked', true);
+
+        // Приводим "HH:MM:SS" -> "HH:MM"
+        const st = String(p.send_time).slice(0, 5);
+        $('#transitTime').val(st || '09:00');
+      } else {
+        $('#subscribeDaily').prop('checked', false);
+
+        // Если подписки нет — пусть в поле всё равно будет дефолт 09:00
+        if (!$('#transitTime').val()) {
+          $('#transitTime').val('09:00');
+        }
+      }
+
 
       // Дата
       if (p.date) {
@@ -325,8 +625,14 @@
 
 
   $(document).ready(() => {
+    // Дефолт для рассылки транзитов
+    if (!$('#transitTime').val()) {
+      $('#transitTime').val('09:00');
+    }
+    $('#subscribeDaily').prop('checked', false);
     // 1) Сначала пробуем подгрузить профиль из API (если есть)
     loadProfileFromApi();
+    applyI18n();
 
     // 2) Если имени в форме нет — попробуем достать его из Telegram
     const tgUser = parseTelegramUserFromInitData();
@@ -378,9 +684,19 @@
     }
 
     // --- Ежедневные транзиты ---
-    const sendTimeRaw = $('#transitTime').val().trim();
-    // (чекбокса у нас нет — если поле заполнено, значит, человек хочет рассылку)
-    const subscribeDaily = !!sendTimeRaw;
+    let sendTimeRaw = $('#transitTime').val().trim();
+    const subscribeDaily = $('#subscribeDaily').is(':checked');
+
+    // Если включили подписку, но время не указали — ставим дефолт 09:00
+    if (subscribeDaily && !sendTimeRaw) {
+      sendTimeRaw = '09:00';
+    }
+
+    // Нормализуем к формату HH:MM:SS (бэку так обычно спокойнее)
+    if (sendTimeRaw && sendTimeRaw.length === 5) {
+      sendTimeRaw += ':00';
+    }
+
 
     // 1) Сначала ходим в /natal/by_city, чтобы backend сам:
     //    - геокодил город,
@@ -389,7 +705,7 @@
     //    - вернул lat/lon + utc_offset_str.
     const basePayload = {
       name,
-      lang: 'ru',
+      lang: UI_LANG,
       date_local,
       time_local,
       yandex_uri: selected.uri,
