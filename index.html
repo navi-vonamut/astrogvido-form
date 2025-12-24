@@ -30,77 +30,6 @@
       font-size: 0.875rem;
     }
 
-    /* Общий фон */
-body {
-  background: radial-gradient(
-    circle at top,
-    #1b1f2a 0%,
-    #0f1117 60%,
-    #0b0d12 100%
-  );
-}
-
-/* Карточка формы */
-.card {
-  background-color: #141824;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-}
-
-/* Заголовки */
-h1, h4 {
-  color: #e9ecf1;
-}
-
-/* Вторичный текст */
-.lead,
-.hint,
-.form-text {
-  color: #b6bccd;
-}
-
-/* Инпуты */
-.form-control {
-  background-color: #0f1320;
-  border-color: #2a2f45;
-  color: #e9ecf1;
-}
-
-.form-control::placeholder {
-  color: #7f86a3;
-}
-
-/* Фокус */
-.form-control:focus {
-  background-color: #0f1320;
-  border-color: #6ea8fe;
-  box-shadow: 0 0 0 0.25rem rgba(110, 168, 254, 0.25);
-}
-
-/* Primary-кнопка */
-.btn-primary {
-  background: linear-gradient(135deg, #5c7cfa, #4dabf7);
-  border: none;
-}
-
-.btn-primary:hover {
-  filter: brightness(1.1);
-}
-
-/* Dropdown (подсказки города) */
-.dropdown-menu {
-  background-color: #141824;
-  border-color: #2a2f45;
-}
-
-.dropdown-item {
-  color: #e9ecf1;
-}
-
-.dropdown-item:hover {
-  background-color: #1f2440;
-}
-
   </style>
 </head>
 
@@ -108,8 +37,7 @@ h1, h4 {
   <div class="container">
     <main>
       <div class="p-3 text-center">
-        <img class="d-block mx-auto mb-4" src="image/logo.png" alt="logo"
-          width="72" height="72">
+        <img class="d-block img-fluid" src="image/logo.png" alt="logo">
         <h1 class="h2" id="pageTitle" data-i18n="title">Данные о дне рождения</h1>
         <p class="lead" id="pageLead" data-i18n="lead">
           Укажите имя, город рождения, дату и время. Если время неизвестно — поставим «солнечную» карту (12:00).
@@ -234,13 +162,13 @@ h1, h4 {
 
   const I18N = {
 ru: {
-  title: "Данные о дне рождения",
-  lead: "Укажите имя, город рождения, дату и время. Если время неизвестно — поставим «солнечную» карту (12:00).",
+  title: "Данные рождения",
+  lead: "Укажите имя, город рождения, дату и время. Если время неизвестно — поставим 12:00, и я дам общий разбор.",
 
-  natalTitle: "Натальная карта",
-  dailyTitle: "Ежедневный гороскоп по транзитам",
-  transitHint: "В это время вы будете получать ежедневную интерпретацию транзитов.",
-  cityInvalid: "Укажите город из списка.",
+  natalTitle: "О вас и ваших ритмах",
+  dailyTitle: "Ежедневный настрой дня",
+  transitHint: "В это время вы будете получать короткий разбор настроя дня и практичный совет.",
+  cityInvalid: "Пожалуйста, выберите город из списка.",
 
   nameLabel: "Имя (необязательно)",
   namePh: "Например: Анна",
@@ -252,30 +180,30 @@ ru: {
   timeLabel: "Время рождения",
   unknownTime: "Не знаю время (поставим 12:00)",
 
-  subscribeDaily: "Присылать ежедневные транзиты",
+  subscribeDaily: "Присылать ежедневный настрой",
   transitTimeLabel: "Время рассылки",
   save: "Сохранить",
 
   errDate: "Укажите дату рождения.",
   errCity: "Укажите город.",
-  errPickFromList: "Пожалуйста, выберите город из подсказок, а не просто введите текст.",
+  errPickFromList: "Выберите город из подсказок, пожалуйста (не вводите вручную).",
   savedOk: "Сохранено ✅",
   savedFail: "Не удалось сохранить 😔 Попробуйте позже.",
 
-  loading: "Загрузка…",
+  loading: "Загружаю…",
   saving: "Сохраняю…",
   errNetwork: "Сеть шалит 😵‍💫 Проверьте интернет и попробуйте ещё раз.",
-  errInitDataMissing: "Не удалось получить данные Telegram (init_data). Откройте форму из бота.",
+  errInitDataMissing: "Не удалось получить данные Telegram. Откройте форму из бота.",
   errServer: "Сервер вернул ошибку. Попробуйте позже."
 },
 
 en: {
   title: "Birth details",
-  lead: "Enter your name, birthplace, date and time. If time is unknown, we’ll use 12:00.",
+  lead: "Enter your name, birthplace, date, and time. If the time is unknown, we’ll use 12:00 and I’ll give a general reading.",
 
-  natalTitle: "Natal chart",
-  dailyTitle: "Daily transits horoscope",
-  transitHint: "At this time you will receive a daily interpretation of transits.",
+  natalTitle: "About you and your rhythms",
+  dailyTitle: "Daily vibe",
+  transitHint: "At this time you’ll receive a short daily check-in with practical tips.",
   cityInvalid: "Please choose a city from the list.",
 
   nameLabel: "Name (optional)",
@@ -288,7 +216,7 @@ en: {
   timeLabel: "Birth time",
   unknownTime: "I don't know the time (use 12:00)",
 
-  subscribeDaily: "Send daily transits",
+  subscribeDaily: "Send a daily check-in",
   transitTimeLabel: "Delivery time",
   save: "Save",
 
@@ -296,22 +224,22 @@ en: {
   errCity: "Please enter a city.",
   errPickFromList: "Please pick a city from suggestions (don’t just type it).",
   savedOk: "Saved ✅",
-  savedFail: "Failed to save 😔 Please try again.",
+  savedFail: "Failed to save 😔 Please try again later.",
 
   loading: "Loading…",
   saving: "Saving…",
-  errNetwork: "Network error 😵‍💫 Check your connection and try again.",
-  errInitDataMissing: "Couldn’t get Telegram init_data. Please open this form from the bot.",
+  errNetwork: "Network hiccup 😵‍💫 Check your connection and try again.",
+  errInitDataMissing: "Couldn’t get Telegram data. Please open this form from the bot.",
   errServer: "Server error. Please try again later."
 },
 
 es: {
   title: "Datos de nacimiento",
-  lead: "Indica tu nombre, ciudad de nacimiento, fecha y hora. Si no sabes la hora, usaremos 12:00.",
+  lead: "Indica tu nombre, ciudad de nacimiento, fecha y hora. Si no sabes la hora, usaremos 12:00 y haré una lectura general.",
 
-  natalTitle: "Carta natal",
-  dailyTitle: "Horóscopo diario por tránsitos",
-  transitHint: "A esta hora recibirás una interpretación diaria de los tránsitos.",
+  natalTitle: "Sobre ti y tus ritmos",
+  dailyTitle: "Energía del día",
+  transitHint: "A esta hora recibirás un breve resumen del día con consejos prácticos.",
   cityInvalid: "Elige una ciudad de la lista.",
 
   nameLabel: "Nombre (opcional)",
@@ -324,30 +252,30 @@ es: {
   timeLabel: "Hora de nacimiento",
   unknownTime: "No sé la hora (usar 12:00)",
 
-  subscribeDaily: "Enviar tránsitos diarios",
+  subscribeDaily: "Recibir resumen diario",
   transitTimeLabel: "Hora de envío",
   save: "Guardar",
 
   errDate: "Indica la fecha de nacimiento.",
   errCity: "Indica la ciudad.",
-  errPickFromList: "Elige una ciudad de las sugerencias (no la escribas solo).",
+  errPickFromList: "Elige una ciudad de las sugerencias (no la escribas a mano).",
   savedOk: "Guardado ✅",
-  savedFail: "No se pudo guardar 😔 Inténtalo de nuevo.",
+  savedFail: "No se pudo guardar 😔 Inténtalo más tarde.",
 
   loading: "Cargando…",
   saving: "Guardando…",
-  errNetwork: "Error de red 😵‍💫 Revisa tu conexión e inténtalo de nuevo.",
-  errInitDataMissing: "No se pudo obtener init_data de Telegram. Abre el formulario desde el bot.",
+  errNetwork: "Problema de red 😵‍💫 Revisa tu conexión e inténtalo de nuevo.",
+  errInitDataMissing: "No se pudo obtener los datos de Telegram. Abre el formulario desde el bot.",
   errServer: "Error del servidor. Inténtalo más tarde."
 },
 
 pt: {
   title: "Dados de nascimento",
-  lead: "Informe seu nome, cidade de nascimento, data e hora. Se não souber a hora, usaremos 12:00.",
+  lead: "Informe seu nome, cidade de nascimento, data e hora. Se não souber a hora, usaremos 12:00 e eu faço uma leitura geral.",
 
-  natalTitle: "Mapa natal",
-  dailyTitle: "Horóscopo diário por trânsitos",
-  transitHint: "Nesse horário você receberá uma interpretação diária dos trânsitos.",
+  natalTitle: "Sobre você e seus ritmos",
+  dailyTitle: "Clima do dia",
+  transitHint: "Nesse horário você receberá um resumo diário com dicas práticas.",
   cityInvalid: "Escolha uma cidade da lista.",
 
   nameLabel: "Nome (opcional)",
@@ -360,24 +288,23 @@ pt: {
   timeLabel: "Hora de nascimento",
   unknownTime: "Não sei a hora (usar 12:00)",
 
-  subscribeDaily: "Enviar trânsitos diários",
+  subscribeDaily: "Receber resumo diário",
   transitTimeLabel: "Horário de envio",
   save: "Salvar",
 
   errDate: "Informe a data de nascimento.",
   errCity: "Informe a cidade.",
-  errPickFromList: "Escolha uma cidade nas sugestões (não apenas digite).",
+  errPickFromList: "Escolha uma cidade nas sugestões (não digite manualmente).",
   savedOk: "Salvo ✅",
-  savedFail: "Não foi possível salvar 😔 Tente novamente.",
+  savedFail: "Não foi possível salvar 😔 Tente mais tarde.",
 
   loading: "Carregando…",
   saving: "Salvando…",
-  errNetwork: "Erro de rede 😵‍💫 Verifique sua conexão e tente novamente.",
-  errInitDataMissing: "Não foi possível obter o init_data do Telegram. Abra este formulário pelo bot.",
+  errNetwork: "Falha de rede 😵‍💫 Verifique sua conexão e tente novamente.",
+  errInitDataMissing: "Não foi possível obter os dados do Telegram. Abra este formulário pelo bot.",
   errServer: "Erro no servidor. Tente novamente mais tarde."
 }
 };
-
 function t(key) {
   return (I18N[UI_LANG] && I18N[UI_LANG][key]) || (I18N.ru && I18N.ru[key]) || key;
 }
