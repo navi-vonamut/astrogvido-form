@@ -551,33 +551,26 @@ function applyI18n() {
   }
 
   async function loadLangFromSettingsApi() {
-  if (!INIT_DATA) {
-    showAlert(t('errInitDataMissing'), 'danger');
-    return;
-  }
-
-  const u = parseTelegramUserFromInitData();
-  const tgId = u?.id;
-  if (!tgId) return;
-
-  try {
-    const url = apiUrl('/tg/settings', { tg_id: tgId });
-    const r = await fetch(url, { cache: 'no-store' });
-    const data = await r.json();
-
-    // ВАЖНО: подстрой под реальный формат ответа:
-    // либо data.lang, либо data.settings.lang
-    const savedLang = data?.lang || data?.settings?.lang;
-
-    if (savedLang) {
-      UI_LANG = normalizeLang(savedLang);
-      document.documentElement.lang = UI_LANG;
-      applyI18n();
+    if (!INIT_DATA) {
+      showAlert(t('errInitDataMissing'), 'danger');
+      return;
     }
-  } catch (e) {
-    console.warn('Не удалось загрузить настройки языка:', e);
+
+    try {
+      const url = apiUrl('/tg/settings/webapp', { init_data: INIT_DATA });
+      const r = await fetch(url, { cache: 'no-store' });
+      const data = await r.json();
+
+      const savedLang = data?.lang;
+      if (savedLang) {
+        UI_LANG = normalizeLang(savedLang);
+        document.documentElement.lang = UI_LANG;
+        applyI18n();
+      }
+    } catch (e) {
+      console.warn('Не удалось загрузить язык из настроек:', e);
+    }
   }
-}
 
   $(document).ready(async () => {
     // 1) сначала применяем язык телеграма (UI_LANG уже выставлен)
