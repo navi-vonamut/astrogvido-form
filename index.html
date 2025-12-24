@@ -550,36 +550,61 @@ function applyI18n() {
     }
   }
 
+  async function loadLangFromSettingsApi() {
+  if (!INIT_DATA) {
+    showAlert(t('errInitDataMissing'), 'danger');
+    return;
+  }
 
-  $(document).ready(() => {
-    // Дефолт для рассылки транзитов
-    if (!$('#transitTime').val()) {
-      $('#transitTime').val('09:00');
+  const u = parseTelegramUserFromInitData();
+  const tgId = u?.id;
+  if (!tgId) return;
+
+  try {
+    const url = apiUrl('/tg/settings', { tg_id: tgId });
+    const r = await fetch(url, { cache: 'no-store' });
+    const data = await r.json();
+
+    // ВАЖНО: подстрой под реальный формат ответа:
+    // либо data.lang, либо data.settings.lang
+    const savedLang = data?.lang || data?.settings?.lang;
+
+    if (savedLang) {
+      UI_LANG = normalizeLang(savedLang);
+      document.documentElement.lang = UI_LANG;
+      applyI18n();
     }
-    $('#subscribeDaily').prop('checked', false);
-    // 1) Сначала пробуем подгрузить профиль из API (если есть)
-    loadProfileFromApi();
+  } catch (e) {
+    console.warn('Не удалось загрузить настройки языка:', e);
+  }
+}
+
+  $(document).ready(async () => {
+    // 1) сначала применяем язык телеграма (UI_LANG уже выставлен)
     applyI18n();
 
-    // 2) Если имени в форме нет — попробуем достать его из Telegram
+    // 2) затем подтягиваем выбранный язык из настроек
+    await loadLangFromSettingsApi();
+
+    // 3) потом уже подгружаем профиль (дата/время/город/подписка)
+    await loadProfileFromApi();
+
+    // 4) имя из Telegram (как у тебя было)
     const tgUser = parseTelegramUserFromInitData();
     if (tgUser) {
-      const fullName = [
-        tgUser.first_name || '',
-        tgUser.last_name || '',
-      ].join(' ').trim();
-
+      const fullName = [tgUser.first_name || '', tgUser.last_name || ''].join(' ').trim();
       const username = tgUser.username ? tgUser.username.trim() : '';
-
-      // Приоритет: fullName -> username -> ничего
       const suggestedName = fullName || username || '';
-
       if (suggestedName && !$('#firstName').val().trim()) {
         $('#firstName').val(suggestedName);
       }
     }
+        // Дефолт для рассылки транзитов
+    if (!$('#transitTime').val()) {
+      $('#transitTime').val('09:00');
+    }
+    $('#subscribeDaily').prop('checked', false);
   });
-
 
   // ====== Submit ======
   $('form.needs-validation').on('submit', async function (e) {
