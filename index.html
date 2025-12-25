@@ -634,11 +634,6 @@ function applyI18n() {
       sendTimeRaw = '09:00';
     }
 
-    // Нормализуем к формату HH:MM:SS (бэку так обычно спокойнее)
-    if (sendTimeRaw && sendTimeRaw.length === 5) {
-      sendTimeRaw += ':00';
-    }
-
 
     // 1) Сначала ходим в /natal/by_city, чтобы backend сам:
     //    - геокодил город,
