@@ -570,16 +570,15 @@ function applyI18n() {
   }
 
   $(document).ready(async () => {
-    // 1) сначала применяем язык телеграма (UI_LANG уже выставлен)
     applyI18n();
 
-    // 2) затем подтягиваем выбранный язык из настроек
-    await loadLangFromSettingsApi();
+    // дефолты ДО загрузки профиля
+    if (!$('#transitTime').val()) $('#transitTime').val('09:00');
 
-    // 3) потом уже подгружаем профиль (дата/время/город/подписка)
+    await loadLangFromSettingsApi();
     await loadProfileFromApi();
 
-    // 4) имя из Telegram (как у тебя было)
+    // имя из Telegram ...
     const tgUser = parseTelegramUserFromInitData();
     if (tgUser) {
       const fullName = [tgUser.first_name || '', tgUser.last_name || ''].join(' ').trim();
@@ -589,12 +588,8 @@ function applyI18n() {
         $('#firstName').val(suggestedName);
       }
     }
-        // Дефолт для рассылки транзитов
-    if (!$('#transitTime').val()) {
-      $('#transitTime').val('09:00');
-    }
-    $('#subscribeDaily').prop('checked', false);
   });
+
 
   // ====== Submit ======
   $('form.needs-validation').on('submit', async function (e) {
